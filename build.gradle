@@ -11,8 +11,14 @@ plugins {
 }
 
 scmVersion {
+    localOnly = true
+
     checks {
         uncommittedChanges = false
+    }
+
+    tag {
+        prefix = null
     }
 }
 
