@@ -107,10 +107,11 @@ class CloudformationDeployTask extends Exec {
         def finalTags = new HashMap()
 
         // Add tags defined in root project
-        finalTags.putAll(project.rootProject.findProperty("awsTags") ?: [:])
+        validatePropertyIsMap(project.rootProject.findProperty("awsTags"))
+            .ifPresent({ tags -> finalTags.putAll(tags)})
 
-        // Add subproject tags
-        finalTags.putAll(project.findProperty("awsTags") ?: [:])
+        validatePropertyIsMap(project.findProperty("awsTags"))
+            .ifPresent({ tags -> finalTags.putAll(tags)})
 
         // Add found resource tags to deployment
         finalTags.eachWithIndex { tagKey, tagValue, index ->
@@ -148,4 +149,17 @@ class CloudformationDeployTask extends Exec {
             logger.lifecycle("${AnsiColors.YELLOW}NOTE: --do-not-execute is active -- this deployment will not run${AnsiColors.RESET}")
         }
     }
+
+    static Optional<Map> validatePropertyIsMap(Object propertyValue) {
+        if(propertyValue == null) {
+            return Optional.empty()
+        }
+        else if(propertyValue instanceof Map) {
+            return Optional.of(propertyValue)
+        }
+        else {
+            throw new Exception("Invalid property type -- expecting a Map instance")
+        }
+    }
+
 }
