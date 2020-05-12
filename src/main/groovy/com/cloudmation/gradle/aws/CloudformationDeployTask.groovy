@@ -103,24 +103,38 @@ class CloudformationDeployTask extends Exec {
             args("--capabilities", project.awsCapabilities)
         }
 
-        // Determine tags to be added
+        // Scan for resource tags to be added
         def finalTags = new HashMap()
-        if(project.rootProject.hasProperty("awsTags")) {
-            // Add tags defined in root project
-            finalTags.putAll(project.rootProject.awsTags)
-        }
-        if(project.hasProperty("awsTags")) {
-            // Add tags defined in subproject
-            finalTags.putAll(project.awsTags)
+
+        // Add tags defined in root project
+        finalTags.putAll(project.rootProject.findProperty("awsTags") ?: [:])
+
+        // Add subproject tags
+        finalTags.putAll(project.findProperty("awsTags") ?: [:])
+
+        // Add found resource tags to deployment
+        finalTags.each { tagKey, tagValue, index ->
+            if(index == 0 ) args("--tags")
+
+            logger.lifecycle("Applying tag ${tagKey}=${tagValue} to deployment")
+            args("${tagKey}=${tagValue}")
         }
 
-        // Optionally, add tags to deployment
-        if(finalTags.size() > 0) {
-            args("--tags")
-            finalTags.each { tagKey, tagValue ->
-                logger.lifecycle("Applying tag ${tagKey}=${tagValue} to deployment")
-                args("${tagKey}=${tagValue}")
-            }
+        // Scan for parameter overrides to be added
+        def finalParameters = new HashMap()
+
+        // Add parameters defined in root project
+        finalParameters.putAll(project.rootProject.findProperty("awsParameters") ?: [:])
+
+        // Add subproject parameters
+        finalParameters.putAll(project.findProperty("awsParameters") ?: [:])
+
+        // Add found parameter overrides to template
+        finalParameters.each { paramName, paramValue, index ->
+            if(index == 0) args("--parameter-overrides")
+
+            logger.lifecycle("Applying parameter ${paramName}=${paramValue} to deployment")
+            args("${paramName}=${paramValue}")
         }
 
         // Inspect the final set of arguments before execution
