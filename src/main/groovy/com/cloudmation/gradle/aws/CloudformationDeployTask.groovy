@@ -107,11 +107,16 @@ class CloudformationDeployTask extends Exec {
         def finalTags = new HashMap()
 
         // Add tags defined in root project
-        validatePropertyIsMap(project.rootProject.findProperty("awsTags"))
-            .ifPresent({ tags -> finalTags.putAll(tags)})
+        validatePropertyIsMap(
+            project.rootProject.findProperty("awsTags"),
+            "'awsTags' in root project")
+        .ifPresent({ tags -> finalTags.putAll(tags)})
 
-        validatePropertyIsMap(project.findProperty("awsTags"))
-            .ifPresent({ tags -> finalTags.putAll(tags)})
+        // Add tags defined in subproject
+        validatePropertyIsMap(
+            project.findProperty("awsTags"),
+            "'awsTags' in subproject ${project.name}")
+        .ifPresent({ tags -> finalTags.putAll(tags)})
 
         // Add found resource tags to deployment
         finalTags.eachWithIndex { tagKey, tagValue, index ->
@@ -125,10 +130,16 @@ class CloudformationDeployTask extends Exec {
         def finalParameters = new HashMap()
 
         // Add parameters defined in root project
-        finalParameters.putAll(project.rootProject.findProperty("awsParameters") ?: [:])
+        validatePropertyIsMap(
+            project.rootProject.findProperty("awsParameters"),
+            "'awsParameters' in root project")
+        .ifPresent({params -> finalParameters.putAll(params)})
 
-        // Add subproject parameters
-        finalParameters.putAll(project.findProperty("awsParameters") ?: [:])
+        // Add parameters defined in subproject
+        validatePropertyIsMap(
+            project.findProperty("awsParameters"),
+            "'awsParameters' in subproject ${project.name}")
+        .ifPresent({ params -> finalParameters.putAll(params)})
 
         // Add found parameter overrides to template
         finalParameters.eachWithIndex { paramName, paramValue, index ->
@@ -150,7 +161,7 @@ class CloudformationDeployTask extends Exec {
         }
     }
 
-    static Optional<Map> validatePropertyIsMap(Object propertyValue) {
+    static Optional<Map> validatePropertyIsMap(Object propertyValue, String source) {
         if(propertyValue == null) {
             return Optional.empty()
         }
@@ -158,7 +169,7 @@ class CloudformationDeployTask extends Exec {
             return Optional.of(propertyValue)
         }
         else {
-            throw new Exception("Invalid property type -- expecting a Map instance")
+            throw new Exception("Invalid property type ${(source) ? "for ${source}" : ""} - expecting a Map instance")
         }
     }
 
