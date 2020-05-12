@@ -117,6 +117,7 @@ class CloudformationDeployTask extends Exec {
 
         // Run deployment unless requested not to
         if(!(doNotExecute)) {
+            logger.warn("--do-not-execute is active -- this deployment will not run")
             super.exec()
         }
     }
