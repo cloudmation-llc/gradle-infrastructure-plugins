@@ -4,6 +4,10 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
 
+/**
+ * Gradle project plugin which scans each :cloudformation subproject and performs additional project setup work
+ * including useful tasks specifically for working with CloudFormation templates.
+ */
 class AwsProjectPlugin implements Plugin<Project> {
 
     @Override

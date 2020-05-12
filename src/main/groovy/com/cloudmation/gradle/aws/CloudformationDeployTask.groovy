@@ -5,6 +5,14 @@ import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.options.Option
 
+/**
+ * Custom Gradle task which encapsulates the "cloudformation deploy" operation of the official AWS CLI. This task
+ * allows you leverage many of the Gradle conveniences such as settings project wide defaults, subproject specific
+ * overrides.
+ *
+ * Useful features such as stack tagging are easily configurable and allow for the creation of sensible organization
+ * defaults to organize stacks and the resources managed by them.
+ */
 class CloudformationDeployTask extends Exec {
 
     private boolean doNotDeploy = false
@@ -115,6 +123,7 @@ class CloudformationDeployTask extends Exec {
             }
         }
 
+        // Inspect the final set of arguments before execution
         logger.info "Calculated args -> ${args}"
 
         // Run deployment unless requested not to
