@@ -66,8 +66,9 @@ class CloudformationDeployTask extends Exec {
 
         // Optionally, add no-execute-changeset
         if(doNotDeploy) {
-            logger.lifecycle("Applying --no-execute-changeset to deployment")
             args("--no-execute-changeset")
+            logger.lifecycle("${AnsiColors.YELLOW}NOTE: --no-execute-changeset is active -- the stack will be created, but not deployed${AnsiColors.RESET}")
+            logger.lifecycle("${AnsiColors.YELLOW}Use the CloudFormation console to view proposed resource changes${AnsiColors.RESET}")
         }
 
         // Optionally, set a specific AWS configuration profile
@@ -121,7 +122,7 @@ class CloudformationDeployTask extends Exec {
             super.exec()
         }
         else {
-            logger.lifecycle("${AnsiColors.ORANGE}--do-not-execute is active -- this deployment will not run${AnsiColors.RESET}")
+            logger.lifecycle("${AnsiColors.YELLOW}NOTE: --do-not-execute is active -- this deployment will not run${AnsiColors.RESET}")
         }
     }
 }
