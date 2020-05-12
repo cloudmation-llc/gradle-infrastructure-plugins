@@ -1,0 +1,35 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+plugins {
+    id "pl.allegro.tech.build.axion-release" version "1.11.0"
+    id "groovy"
+    id "maven-publish"
+}
+
+scmVersion {
+    checks {
+        uncommittedChanges = false
+    }
+}
+
+project.version = scmVersion.version
+
+group "com.cloudmation"
+
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+}
+
+publishing {
+    publications {
+        gradlePlugin(MavenPublication) {
+            artifactId = "gradle-project-plugins"
+            from components.java
+        }
+    }
+}
