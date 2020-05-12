@@ -75,7 +75,7 @@ class CloudformationDeployTask extends Exec {
         // Optionally, add no-execute-changeset
         if(doNotDeploy) {
             args("--no-execute-changeset")
-            logger.lifecycle("${AnsiColors.YELLOW}NOTE: --no-execute-changeset is active -- the stack will be created, but not deployed${AnsiColors.RESET}")
+            logger.lifecycle("${AnsiColors.YELLOW}NOTE: --do-not-deploy is active -- the stack will be created, but not deployed${AnsiColors.RESET}")
             logger.lifecycle("${AnsiColors.YELLOW}Use the CloudFormation console to view proposed resource changes${AnsiColors.RESET}")
         }
 
