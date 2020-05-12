@@ -113,7 +113,7 @@ class CloudformationDeployTask extends Exec {
         finalTags.putAll(project.findProperty("awsTags") ?: [:])
 
         // Add found resource tags to deployment
-        finalTags.each { tagKey, tagValue, index ->
+        finalTags.eachWithIndex { tagKey, tagValue, index ->
             if(index == 0 ) args("--tags")
 
             logger.lifecycle("Applying tag ${tagKey}=${tagValue} to deployment")
@@ -130,7 +130,7 @@ class CloudformationDeployTask extends Exec {
         finalParameters.putAll(project.findProperty("awsParameters") ?: [:])
 
         // Add found parameter overrides to template
-        finalParameters.each { paramName, paramValue, index ->
+        finalParameters.eachWithIndex { paramName, paramValue, index ->
             if(index == 0) args("--parameter-overrides")
 
             logger.lifecycle("Applying parameter ${paramName}=${paramValue} to deployment")
