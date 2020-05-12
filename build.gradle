@@ -18,7 +18,7 @@ scmVersion {
     }
 
     tag {
-        prefix = null
+        prefix = ""
     }
 }
 
