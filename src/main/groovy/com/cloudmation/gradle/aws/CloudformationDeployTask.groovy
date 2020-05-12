@@ -18,12 +18,12 @@ class CloudformationDeployTask extends Exec {
     private boolean doNotDeploy = false
     private boolean doNotExecute = false
 
-    @Option(option = "do-not-deploy", description = "Creates but does not execute the changeset")
+    @Option(option = "do-not-deploy", description = "Creates the stack but does not execute the changeset (see --no-execute-changeset for AWS CLI)")
     void setDoNotDeploy(boolean value) {
         this.doNotDeploy = value
     }
 
-    @Option(option = "do-not-execute", description = "Runs all steps except executing the deployment command (best for debugging")
+    @Option(option = "do-not-execute", description = "Runs all steps except executing the deploy command with the AWS CLI (best for debugging")
     void setDoNotExecute(boolean value) {
         this.doNotExecute = value
     }
