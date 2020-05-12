@@ -118,8 +118,10 @@ class CloudformationDeployTask extends Exec {
 
         // Run deployment unless requested not to
         if(!(doNotExecute)) {
-            logger.lifecycle("${AnsiColors.ORANGE}--do-not-execute is active -- this deployment will not run${AnsiColors.RESET}")
             super.exec()
+        }
+        else {
+            logger.lifecycle("${AnsiColors.ORANGE}--do-not-execute is active -- this deployment will not run${AnsiColors.RESET}")
         }
     }
 }
