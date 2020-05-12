@@ -26,6 +26,17 @@ dependencies {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = project.findProperty("com.cloudmation.ghp.url")
+            credentials {
+                username = project.findProperty("com.cloudmation.ghp.username")
+                password = project.findProperty("com.cloudmation.ghp.token")
+            }
+        }
+    }
+
     publications {
         gradlePlugin(MavenPublication) {
             artifactId = "gradle-project-plugins"
