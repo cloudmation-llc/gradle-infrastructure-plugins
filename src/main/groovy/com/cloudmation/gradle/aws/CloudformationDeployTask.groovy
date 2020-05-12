@@ -1,5 +1,6 @@
 package com.cloudmation.gradle.aws
 
+import com.cloudmation.gradle.util.AnsiColors
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.options.Option
@@ -117,7 +118,7 @@ class CloudformationDeployTask extends Exec {
 
         // Run deployment unless requested not to
         if(!(doNotExecute)) {
-            logger.warn("--do-not-execute is active -- this deployment will not run")
+            logger.lifecycle("${AnsiColors.ORANGE}--do-not-execute is active -- this deployment will not run${AnsiColors.RESET}")
             super.exec()
         }
     }
