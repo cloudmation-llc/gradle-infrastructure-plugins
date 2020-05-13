@@ -161,7 +161,15 @@ class CloudformationDeployTask extends Exec {
         }
     }
 
-    static Optional<Map> validatePropertyIsMap(Object propertyValue, String source) {
+    /**
+     * Checks if a property value is an instance of a java.util.Map. If the value matches, then it is returned
+     * via an Optional for further processing. If the value is null/non-existent then nothing happens. If the
+     * value does not match, then an unchecked exception is thrown indicating how to resolve the problem.
+     * @param propertyValue The value to be checked
+     * @param additionalDetail Context-specific information to include in the exception message
+     * @return An Optional with the property value (or empty)
+     */
+    static Optional<Map> validatePropertyIsMap(Object propertyValue, String additionalDetail) {
         if(propertyValue == null) {
             return Optional.empty()
         }
@@ -169,7 +177,7 @@ class CloudformationDeployTask extends Exec {
             return Optional.of(propertyValue)
         }
         else {
-            throw new Exception("Invalid property type ${(source) ? "for ${source}" : ""} - expecting a Map instance")
+            throw new RuntimeException("Invalid property type ${(additionalDetail) ? "for ${additionalDetail}" : ""} - expecting a Map instance")
         }
     }
 
