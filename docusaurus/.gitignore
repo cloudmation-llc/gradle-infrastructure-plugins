@@ -1,15 +1,14 @@
-.gradle
-.idea
-build
+# Dependencies
+/node_modules
 
-# Docusaurus: dependencies
-node_modules
+# Production
+/build
 
-# Docusaurus: generated files
+# Generated files
 .docusaurus
 .cache-loader
 
-# Docusaurus: misc
+# Misc
 .DS_Store
 .env.local
 .env.development.local
