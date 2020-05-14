@@ -26,9 +26,15 @@ project.version = scmVersion.version
 
 group "com.cloudmation"
 
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
+    implementation platform("software.amazon.awssdk:bom:2.13.+")
+    implementation "software.amazon.awssdk:cloudformation:2.13.+"
 }
 
 publishing {
@@ -47,6 +53,12 @@ publishing {
         gradlePlugin(MavenPublication) {
             artifactId = "gradle-project-plugins"
             from components.java
+
+            versionMapping {
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
         }
     }
 }
