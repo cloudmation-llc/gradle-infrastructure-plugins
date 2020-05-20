@@ -14,7 +14,7 @@ class AwsProjectSettingsPlugin implements Plugin<Settings> {
     void apply(Settings settings) {
         def rootProjectPath = settings.rootDir.toPath()
 
-        new File(settings.rootDir, "templates").eachFileRecurse(FileType.FILES) { file ->
+        new File(settings.rootDir, "cloudformation").eachFileRecurse(FileType.FILES) { file ->
             if(!(file.name.endsWith(".yml"))) {
                 // Skip non-YAML files
                 return
@@ -25,9 +25,9 @@ class AwsProjectSettingsPlugin implements Plugin<Settings> {
             def projectRelativePath = rootProjectPath.relativize(parentPath)
             def projectName = projectRelativePath.getName(projectRelativePath.getNameCount() - 1)
             def generatedProjectName = projectRelativePath
-                    .toString()
-                    .replaceAll("[/]", ".")
-                    .replace("templates.", "cloudformation:") + "." + templateName
+                .toString()
+                .replaceAll("[/]", ".")
+                .replace("templates.", "cloudformation:") + "." + templateName
 
             // Register subproject
             settings.include generatedProjectName
