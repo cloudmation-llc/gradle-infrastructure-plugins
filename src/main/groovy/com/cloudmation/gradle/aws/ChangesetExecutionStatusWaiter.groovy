@@ -39,12 +39,12 @@ class ChangesetExecutionStatusWaiter extends CloudformationUtility implements Su
         logger.debug("Future execution complete")
     }
 
-    void waitWith(Supplier otherTask) {
+    void waitWith(Runnable otherTask) {
         logger.debug("Creating future")
         CompletableFuture
-            .anyOf(
+            .allOf(
                 CompletableFuture.supplyAsync(this),
-                CompletableFuture.supplyAsync(otherTask))
+                CompletableFuture.runAsync(otherTask))
             .get()
         logger.debug("Future execution complete")
     }
