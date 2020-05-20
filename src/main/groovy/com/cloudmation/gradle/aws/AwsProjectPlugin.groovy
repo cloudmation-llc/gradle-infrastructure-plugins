@@ -34,7 +34,7 @@ class AwsProjectPlugin implements Plugin<Project> {
                 args "-t", templateFile.toString()
             }
 
-            task("deploy", type: CloudformationDeployTaskV2) {
+            task("deploy", type: CloudformationDeployTask) {
                 dependsOn "lint"
             }
         }
