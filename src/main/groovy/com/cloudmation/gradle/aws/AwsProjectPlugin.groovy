@@ -8,7 +8,7 @@ import org.gradle.api.tasks.Exec
 import static groovy.io.FileType.FILES
 
 /**
- * Gradle project plugin which scans each :cloudformation subprojects and performs additional project setup work
+ * Gradle project plugin which scans each :cloudformation subproject and performs additional project setup work
  * including dynamically generating tasks specifically for working with CloudFormation templates and deployments.
  */
 class AwsProjectPlugin implements Plugin<Project> {
