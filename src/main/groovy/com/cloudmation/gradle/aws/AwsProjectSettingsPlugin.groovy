@@ -20,14 +20,13 @@ class AwsProjectSettingsPlugin implements Plugin<Settings> {
                 return
             }
 
-            def templateName = file.name.replaceAll(".yml", "")
             def parentPath = file.parentFile.toPath()
             def projectRelativePath = rootProjectPath.relativize(parentPath)
             def projectName = projectRelativePath.getName(projectRelativePath.getNameCount() - 1)
             def generatedProjectName = projectRelativePath
                 .toString()
                 .replaceAll("[/]", ".")
-                .replace("templates.", "cloudformation:") + "." + templateName
+                .replace("cloudformation.", "cloudformation:")
 
             // Register subproject
             settings.include generatedProjectName
