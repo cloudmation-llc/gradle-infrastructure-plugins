@@ -63,7 +63,7 @@ class CloudformationDeployTask extends DefaultTask {
 
     @Internal
     private void withAwsProperty(String propertyName, boolean required = false, Closure handler) {
-        // Look for properties in descending order from most specific defintion to least specific
+        // Look for properties in descending order from most specific definition to least specific
 
         // First, check the task specific CloudFormation configuration
         def propertyValue = cloudformation?.hasProperty(propertyName) ? cloudformation?.getProperty(propertyName) : null
