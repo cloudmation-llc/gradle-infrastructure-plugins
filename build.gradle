@@ -6,6 +6,8 @@ buildscript {
 
 plugins {
     id "pl.allegro.tech.build.axion-release" version "1.11.0"
+    id "com.gradle.plugin-publish" version "0.11.0"
+    id "java-gradle-plugin"
     id "groovy"
     id "maven-publish"
 }
@@ -62,4 +64,28 @@ publishing {
             }
         }
     }
+}
+
+gradlePlugin {
+    plugins {
+        awsProjectSettings {
+            id = "com.cloudmation.aws-project-settings"
+            displayName = "AWS Project Settings"
+            description = "A settings plugin that provides a directory convention and subproject configuration for AWS projects"
+            implementationClass = "com.cloudmation.gradle.aws.AwsProjectSettingsPlugin"
+        }
+
+        awsProject {
+            id = "com.cloudmation.aws-project"
+            displayName = "AWS Project"
+            description = "A plugin that scans for AWS specific projects and dynamically generates Gradle tasks"
+            implementationClass = "com.cloudmation.gradle.aws.AwsProjectPlugin"
+        }
+    }
+}
+
+pluginBundle {
+    website = "https://github.com/cloudmation-llc"
+    vcsUrl = "https://github.com/cloudmation-llc/cloudmation-gradle-project-plugins"
+    tags = ["aws", "cloudformation"]
 }
