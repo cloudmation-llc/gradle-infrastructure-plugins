@@ -3,6 +3,8 @@ package com.cloudmation.gradle.aws
 import com.cloudmation.gradle.util.AnsiColors
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
@@ -23,9 +25,12 @@ import java.time.format.DateTimeFormatter
  */
 class CloudformationDeployTask extends DefaultTask {
 
-    protected CloudFormationClient cloudformation
+    protected CloudFormationClient cloudformationClient
     private boolean doNotExecute = false
     private boolean doNotCreate = false
+
+    @Input String stackName
+    @InputFile File templateFile
 
     @Option(option = "do-not-execute", description = "Creates the stack but does not execute the changeset (see --no-execute-changeset for AWS CLI)")
     void setDoNotExecute(boolean value) {
@@ -37,19 +42,7 @@ class CloudformationDeployTask extends DefaultTask {
         this.doNotCreate = value
     }
 
-    @Input
-    @Override
-    String getGroup() {
-        return "aws"
-    }
-
-    @Input
-    @Override
-    String getDescription() {
-        return "Deploy a CloudFormation stack using the template"
-    }
-
-    @Input
+    @Internal
     String getGeneratedStackName() {
         // If a stack prefix is specified, use it
         if(project.hasProperty("stackPrefix")) {
@@ -58,13 +51,117 @@ class CloudformationDeployTask extends DefaultTask {
 
         // By default, generate a stack prefix from the project name tokens
         def joiner = new StringJoiner("-")
-        for(def index = 0; index < project.nameTokens.size() - 1; index++) {
-            joiner.add(project.nameTokens[index])
+        def nameTokens = project.name.split("[.]")
+        for(def index = 0; index < nameTokens.size(); index++) {
+            joiner.add(nameTokens[index])
         }
 
         return joiner
-            .add(project.stackName)
+            .add(stackName)
             .toString()
+    }
+
+    @Internal
+    private void withAwsProperty(String propertyName, boolean required = false, Closure handler) {
+        // Look for properties in descending order from most specific defintion to least specific
+
+        // First, check the task specific CloudFormation configuration
+        def propertyValue = cloudformation?.hasProperty(propertyName) ? cloudformation?.getProperty(propertyName) : null
+        if(propertyValue) {
+            handler(propertyValue)
+            return
+        }
+
+        // Second, check the subproject CloudFormation configuration
+        propertyValue = project.cloudformation?.hasProperty(propertyName) ? project.cloudformation?.getProperty(propertyName) : null
+        if(propertyValue) {
+            handler(propertyValue)
+            return
+        }
+
+        // Third, check the subproject AWS configuration
+        propertyValue = project.aws?.hasProperty(propertyName) ? project.aws?.getProperty(propertyName) : null
+        if(propertyValue) {
+            handler(propertyValue)
+            return
+        }
+
+        // Lastly, check root project AWS configuration
+        propertyValue = project.rootProject.aws?.hasProperty(propertyName) ? project.rootProject.aws?.getProperty(propertyName) : null
+        if(propertyValue) {
+            handler(propertyValue)
+        }
+        // If the property is required and missing, throw an exception to stop execution
+        else if(required) {
+            throw new MissingAwsPropertyException(propertyName)
+        }
+    }
+
+    /**
+     * Check for resource tags can be applied to the stack at deployment. Tags are scanned from least specific
+     * (i.e. the root project) to the most specific
+     * @param handler
+     */
+    @Internal
+    private void withAwsTags(Closure handler) {
+        // Look for tags from least specific to most specific. Tags defined at more specific layers
+        // can override those from less specific layers.
+
+        def output = new HashMap<String, String>()
+
+        // First, check root project AWS configuration
+        if(project.rootProject.aws?.hasTags()) {
+            output << project.rootProject.aws.tags
+        }
+
+        // Second, check the subproject AWS configuration
+        if(project.aws?.hasTags()) {
+            output << project.aws.tags
+        }
+
+        // Third, check the subproject CloudFormation configuration
+        if(project.cloudformation?.hasTags()) {
+            output << project.cloudformation.tags
+        }
+
+        // Lastly, check the task specific CloudFormation configuration
+        if(cloudformation?.hasTags()) {
+            output << cloudformation.tags
+        }
+
+        // If we captured at least one tag, then call the handler with the collection
+        if(output.size() > 0) {
+            handler(output)
+        }
+    }
+
+    /**
+     * Check for parameter overrides that can be applied against the template to deploy. Parameters can be defined
+     * in the subproject, or per task. Parameters overrides for the task will override those defined at the
+     * subproject project.
+     * @param handler Called with the parameter collection if at least one parameter is defined
+     */
+    @Internal
+    private void withCloudformationParameters(Closure handler) {
+        // Look for tags from least specific to most specific. Tags defined at more specific layers
+        // can override those from less specific layers.
+
+        def output = new HashMap<String, String>()
+
+        // First, check the subproject CloudFormation configuration
+        if(project.cloudformation?.hasParameterOverrides()) {
+            output << project.cloudformation.parameterOverrides
+        }
+
+        // Lastly, check the task specific CloudFormation configuration
+        if(cloudformation?.hasParameterOverrides()) {
+            output << cloudformation.parameterOverrides
+        }
+
+        // If we captured at least one tag, then call the handler with the collection
+        if(output.size() > 0) {
+            handler(output)
+        }
     }
 
     @TaskAction
@@ -73,30 +170,23 @@ class CloudformationDeployTask extends DefaultTask {
         def cloudformationClientBuilder = CloudFormationClient.builder()
 
         // Optionally, set a specific AWS region
-        if(project.hasProperty("awsRegion")) {
-            logger.lifecycle("Using region ${project.awsRegion} for deployment")
-            cloudformationClientBuilder.region(Region.of(project.awsRegion as String))
+        withAwsProperty("region") { String region ->
+            logger.lifecycle("Using region ${region} for deployment")
+            cloudformationClientBuilder.region(Region.of(region))
         }
 
         // Optionally, use a specific AWS profile
-        if(project.hasProperty("awsProfile")) {
-            logger.lifecycle("Applying '--profile ${project.awsProfile}' to deployment")
+        withAwsProperty("profile") { String profile ->
+            logger.lifecycle("Using profile ${project.awsProfile} for deployment")
             cloudformationClientBuilder.credentialsProvider(
                 ProfileCredentialsProvider
                     .builder()
-                    .profileName(project.awsProfile as String)
+                    .profileName(profile)
                     .build())
         }
 
         // Create the CloudFormation client
-        this.cloudformation = cloudformationClientBuilder.build()
-
-        // Check --do-not-create
-        if(doNotCreate) {
-            // End here
-            logger.lifecycle(AnsiColors.yellow("NOTE: the --do-not-create option was specified -- deployment will not run"))
-            return
-        }
+        this.cloudformationClient = cloudformationClientBuilder.build()
 
         // Get the local hostname
         def localHostname = InetAddress.getLocalHost().getHostName()
@@ -107,6 +197,7 @@ class CloudformationDeployTask extends DefaultTask {
 
         // Generate a stack name
         def generatedStackName = getGeneratedStackName()
+        logger.lifecycle("Generating stack name -> ${generatedStackName}")
 
         // Check if the stack exists to decide on a create or update action
         def stackExists = checkStackExists(generatedStackName)
@@ -128,63 +219,58 @@ class CloudformationDeployTask extends DefaultTask {
         createChangeSetRequestBuilder.stackName(getGeneratedStackName())
 
         // Set the template body
-        createChangeSetRequestBuilder.templateBody(project.templateFile.text as String)
+        createChangeSetRequestBuilder.templateBody(templateFile.text as String)
 
         // Optionally, set the IAM role for CloudFormation to assume when executing the stack
-        if(project.hasProperty("awsRoleArn")) {
-            logger.lifecycle("Applying role ARN ${project.awsRoleArn} to deployment")
-            createChangeSetRequestBuilder.roleARN(project.awsRoleArn as String)
+        withAwsProperty("roleArn") { String roleArn ->
+            logger.lifecycle("Using role ARN ${roleArn} for deployment")
+            createChangeSetRequestBuilder.roleARN(roleArn)
         }
 
         // Optionally, set capabilities (example: IAM) that may be needed for stack execution
-        if(project.hasProperty("awsCapabilities")) {
-            logger.lifecycle("Applying capabilities ${project.awsCapabilities} to deployment")
-            createChangeSetRequestBuilder.capabilitiesWithStrings(project.awsCapabilities as Collection<String>)
+        withAwsProperty("capabilities") { List<String> capabilities ->
+            logger.lifecycle("Applying capabilities ${capabilities} to deployment")
+            createChangeSetRequestBuilder.capabilitiesWithStrings(capabilities)
         }
 
-        // Add tags defined in root project
-        validatePropertyIsMap(
-                project.rootProject.findProperty("awsTags"),
-                "'awsTags' in root project")?.each { key, value ->
-            def tag = Tag.builder().key(key).value(value).build()
-            createChangeSetRequestBuilder.tags(tag)
+        // Optionally, add tags
+        withAwsTags { Map<String, String> tags ->
+            logger.lifecycle("Applying tags ${tags} to deployment")
+            def mappedTags = tags.collect { key, value -> Tag.builder().key(key).value(value).build() }
+            createChangeSetRequestBuilder.tags(mappedTags)
         }
 
-        // Add tags defined in current project
-        validatePropertyIsMap(
-                project.findProperty("awsTags"),
-                "'awsTags' in current project ${project.name}")?.each { key, value ->
-            def tag = Tag.builder().key(key).value(value).build()
-            createChangeSetRequestBuilder.tags(tag)
+        // Optionally, add parameter overrides
+        withCloudformationParameters { Map<String, String> parameters ->
+            logger.lifecycle("Applying parameter overrides ${parameters} to deployment")
+            def mappedParams = parameters.collect { String key, String value ->
+                Parameter.builder().parameterKey(key).parameterValue(value).build()
+            }
+            createChangeSetRequestBuilder.parameters(mappedParams)
         }
 
-        // Add parameter overrides defined in root project
-        validatePropertyIsMap(
-                project.rootProject.findProperty("awsParameters"),
-                "'awsParameters' in root project")?.each { key, value ->
-            def parameter = Parameter.builder().parameterKey(key).parameterValue(value).build()
-            createChangeSetRequestBuilder.parameters(parameter)
-        }
-
-        // Add parameter overrides defined in current project
-        validatePropertyIsMap(
-                project.findProperty("awsParameters"),
-                "'awsParameters' in current project ${project.name}")?.each { key, value ->
-            def parameter = Parameter.builder().parameterKey(key).parameterValue(value).build()
-            createChangeSetRequestBuilder.parameters(parameter)
-        }
+        // Apply changeset builder reconfigurations from project
+        project.cloudformation?.applyChangesetBuilderClosures(createChangeSetRequestBuilder)
+        cloudformation?.applyChangesetBuilderClosures(createChangeSetRequestBuilder)
 
         // Complete the build of the changeset request
         def createChangesetRequest = createChangeSetRequestBuilder.build()
 
+        // Check --do-not-create
+        if(doNotCreate) {
+            // End here
+            logger.lifecycle(AnsiColors.yellow("NOTE: the --do-not-create option was specified -- deployment will not run"))
+            return
+        }
+
         // Send the create request to propose creating or updating a stack
         logger.lifecycle("Creating changeset...")
-        def changesetCreationResponse = cloudformation.createChangeSet(createChangesetRequest)
+        def changesetCreationResponse = cloudformationClient.createChangeSet(createChangesetRequest)
         def changesetArn = changesetCreationResponse.id()
 
         // Wait for the changeset to be created
         new ChangesetStatusWaiter()
-            .withCloudFormationClient(cloudformation)
+            .withCloudFormationClient(cloudformationClient)
             .withGradleLogger(logger)
             .withChangesetName(changesetArn)
             .withDesiredStatus(ChangeSetStatus.CREATE_COMPLETE)
@@ -207,17 +293,17 @@ class CloudformationDeployTask extends DefaultTask {
             .clientRequestToken(changeSetName)
             .build()
 
-        def executeChangesetResponse = cloudformation.executeChangeSet(executeChangesetRequest)
+        def executeChangesetResponse = cloudformationClient.executeChangeSet(executeChangesetRequest)
 
         // Wait for the changeset to be executed
         def eventsReporter = new StackEventsReporter()
-            .withCloudFormationClient(cloudformation)
+            .withCloudFormationClient(cloudformationClient)
             .withGradleLogger(logger)
             .withClientRequestToken(changeSetName)
             .withStackName(generatedStackName)
 
         new ChangesetExecutionStatusWaiter()
-            .withCloudFormationClient(cloudformation)
+            .withCloudFormationClient(cloudformationClient)
             .withGradleLogger(logger)
             .withChangesetName(changesetArn)
             .withDesiredExecutionStatus(ExecutionStatus.EXECUTE_COMPLETE)
@@ -238,7 +324,7 @@ class CloudformationDeployTask extends DefaultTask {
                 .stackName(stackName)
                 .build()
 
-            def response = cloudformation.describeStacks(request)
+            def response = cloudformationClient.describeStacks(request)
 
             if(response.hasStacks()) {
                 if(response.stacks().get(0).stackStatus() == StackStatus.REVIEW_IN_PROGRESS) {
@@ -254,25 +340,6 @@ class CloudformationDeployTask extends DefaultTask {
             }
             throw exception
         }
-    }
-
-    /**
-     * Checks if a property value is an instance of a java.util.Map. If the value matches, then it is returned.
-     * If the value is null/non-existent then nothing happens. If the value type does not match, then an unchecked exception
-     * is thrown indicating how to resolve the problem.
-     * @param propertyValue The value to be checked
-     * @param additionalErrorDetail Context-specific information to include in the exception message
-     * @return The original property value
-     */
-    static Map validatePropertyIsMap(Object propertyValue, String additionalErrorDetail) {
-        if(propertyValue == null) {
-            return null
-        }
-        else if(propertyValue instanceof Map) {
-            return propertyValue
-        }
-
-        throw new RuntimeException("Invalid property type ${(additionalErrorDetail) ? "for ${additionalErrorDetail}" : ""} - expecting a Map instance")
     }
 
 }
