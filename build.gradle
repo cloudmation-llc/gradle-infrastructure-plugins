@@ -37,6 +37,7 @@ dependencies {
     implementation localGroovy()
     implementation platform("software.amazon.awssdk:bom:2.13.+")
     implementation "software.amazon.awssdk:cloudformation:2.13.+"
+    implementation "software.amazon.awssdk:sts:2.13.+"
     implementation "org.apache.commons:commons-text:1.8"
 }
 

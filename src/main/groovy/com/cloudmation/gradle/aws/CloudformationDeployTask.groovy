@@ -193,7 +193,7 @@ class CloudformationDeployTask extends DefaultTask {
 
         // Optionally, use a specific AWS profile
         withAwsProperty("profile") { String profile ->
-            logger.lifecycle("Using profile ${project.awsProfile} for deployment")
+            logger.lifecycle("Using profile ${profile} for deployment")
             cloudformationClientBuilder.credentialsProvider(
                 ProfileCredentialsProvider
                     .builder()
