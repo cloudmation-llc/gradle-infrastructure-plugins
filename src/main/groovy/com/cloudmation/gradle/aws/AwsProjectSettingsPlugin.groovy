@@ -29,8 +29,15 @@ class AwsProjectSettingsPlugin implements Plugin<Settings> {
     @Override
     void apply(Settings settings) {
         def rootProjectPath = settings.rootDir.toPath()
+        def cloudformationDir = new File(settings.rootDir, "cloudformation")
 
-        new File(settings.rootDir, "cloudformation").eachFileRecurse(FileType.FILES) { file ->
+        // Check if the 'cloudformation' directory exists, or stop if not found
+        if(!(cloudformationDir.exists())) {
+            return
+        }
+
+        // Deeply iterate through all files beneath cloudformation
+        cloudformationDir.eachFileRecurse(FileType.FILES) { file ->
             if(!(file.name.endsWith(".yml"))) {
                 // Skip non-YAML files
                 return
