@@ -30,11 +30,12 @@ import software.amazon.awssdk.services.cloudformation.model.*
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ExecutionException
 
 /**
- * Custom Gradle task which encapsulates the "cloudformation deploy" operation of the official AWS CLI. This task
- * allows you leverage many of the Gradle conveniences such as settings project wide defaults, subproject specific
- * overrides.
+ * Custom Gradle task which emulates the "cloudformation deploy" operation of the official AWS CLI to deploy
+ * CloudFormation stacks from templates. Many conveniences are added here including live reporting of stack
+ * events right to the CLI (formerly these would only be visible in the AWS console).
  *
  * Useful features such as stack tagging are easily configurable and allow for the creation of sensible organization
  * defaults to organize stacks and the resources managed by them.
@@ -78,39 +79,44 @@ class CloudformationDeployTask extends DefaultTask {
     }
 
     @Internal
-    private void withAwsProperty(String propertyName, boolean required = false, Closure handler) {
-        // Look for properties in descending order from most specific definition to least specific
+    private Object lookupAwsProperty(String propertyName, boolean required = false) {
+        // Look for properties in descending order from most specific sources to least specific
 
         // First, check the task specific CloudFormation configuration
         def propertyValue = cloudformation?.hasProperty(propertyName) ? cloudformation?.getProperty(propertyName) : null
-        if(propertyValue) {
-            handler(propertyValue)
-            return
+        if(propertyValue != null) {
+            return propertyValue
         }
 
         // Second, check the subproject CloudFormation configuration
         propertyValue = project.cloudformation?.hasProperty(propertyName) ? project.cloudformation?.getProperty(propertyName) : null
-        if(propertyValue) {
-            handler(propertyValue)
-            return
+        if(propertyValue != null) {
+            return propertyValue
         }
 
         // Third, check the subproject AWS configuration
         propertyValue = project.aws?.hasProperty(propertyName) ? project.aws?.getProperty(propertyName) : null
-        if(propertyValue) {
-            handler(propertyValue)
-            return
+        if(propertyValue != null) {
+            return propertyValue
         }
 
         // Lastly, check root project AWS configuration
         propertyValue = project.rootProject.aws?.hasProperty(propertyName) ? project.rootProject.aws?.getProperty(propertyName) : null
-        if(propertyValue) {
-            handler(propertyValue)
+        if(propertyValue != null) {
+            return propertyValue
         }
         // If the property is required and missing, throw an exception to stop execution
         else if(required) {
             throw new MissingAwsPropertyException(propertyName)
         }
+
+        return null
+    }
+
+    @Internal
+    private void withAwsProperty(String propertyName, boolean required = false, Closure handler) {
+        def propertyValue = lookupAwsProperty(propertyName, required)
+        propertyValue?.with(handler)
     }
 
     /**
@@ -285,12 +291,26 @@ class CloudformationDeployTask extends DefaultTask {
         def changesetArn = changesetCreationResponse.id()
 
         // Wait for the changeset to be created
-        new ChangesetStatusWaiter()
-            .withCloudFormationClient(cloudformationClient)
-            .withGradleLogger(logger)
-            .withChangesetName(changesetArn)
-            .withDesiredStatus(ChangeSetStatus.CREATE_COMPLETE)
-            .waitFor()
+        def failOnEmptyChangeset = lookupAwsProperty("failOnEmptyChangeset") ?: false
+        try {
+            new ChangesetStatusWaiter()
+                .withCloudFormationClient(cloudformationClient)
+                .withGradleLogger(logger)
+                .withChangesetName(changesetArn)
+                .withDesiredStatus(ChangeSetStatus.CREATE_COMPLETE)
+                .waitFor()
+        }
+        catch(ExecutionException executionException) {
+            def exceptionCause = executionException.getCause()
+            if(exceptionCause instanceof EmptyChangesetException && !(failOnEmptyChangeset)) {
+                // Do nothing if we are not interested in empty changesets
+                logger.lifecycle(AnsiColors.green("No changes needed to be applied"))
+                return
+            }
+
+            throw exceptionCause
+        }
+
         logger.lifecycle("Successfully created change set ${changeSetName} for stack ${generatedStackName}")
 
         // Check --do-not-execute
@@ -325,13 +345,14 @@ class CloudformationDeployTask extends DefaultTask {
             .withDesiredExecutionStatus(ExecutionStatus.EXECUTE_COMPLETE)
             .waitWith(eventsReporter)
 
-        logger.lifecycle(AnsiColors.green("Successfully applied changeset ${changeSetName}"))
+        logger.lifecycle(AnsiColors.green("Successfully applied changeset ${changeSetName} for stack ${generatedStackName}"))
     }
 
     /**
-     * Check if the named stack already exists.
-     * @param stackName
-     * @return
+     * Check if the named stack already exists. Special treatment is applied if a stack is in the
+     * REVIEW_IN_PROGRESS state.
+     * @param stackName Name of the stack
+     * @return True if the stack exists
      */
     boolean checkStackExists(String stackName) {
         try {

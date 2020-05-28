@@ -75,7 +75,13 @@ class ChangesetStatusWaiter extends CloudformationUtility implements Supplier<Op
 
                 // Is there an error condition to throw?
                 else if(errorConditions.contains(describeResponse.status())) {
-                    throw new ChangesetStatusException("Changeset creation failed: ${describeResponse.statusReason()}")
+                    def reason = describeResponse.statusReason()
+
+                    if(reason.contains("didn't contain changes")) {
+                        throw new EmptyChangesetException()
+                    }
+
+                    throw new ChangesetStatusException("Changeset creation failed: ${reason}")
                 }
 
                 // Is the operation still in progress?

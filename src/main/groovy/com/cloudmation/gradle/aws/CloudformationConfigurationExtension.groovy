@@ -23,6 +23,7 @@ class CloudformationConfigurationExtension extends AwsConfigurationExtension {
     private List<Closure> changesetBuilderClosures = new ArrayList<>()
 
     List<String> capabilities
+    Boolean failOnEmptyChangeset
     Map<String, String> parameterOverrides
     String roleArn
 
