@@ -26,6 +26,7 @@ class CloudformationConfigurationExtension extends AwsConfigurationExtension {
     Boolean failOnEmptyChangeset
     Map<String, String> parameterOverrides
     String roleArn
+    String stackName
 
     void capability(String capabilityName) {
         if(capabilities == null) {
