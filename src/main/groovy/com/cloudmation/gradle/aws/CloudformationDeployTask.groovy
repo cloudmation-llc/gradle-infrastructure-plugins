@@ -61,6 +61,12 @@ class CloudformationDeployTask extends DefaultTask {
 
     @Internal
     String getGeneratedStackName() {
+        // If task a specific stack name configured, use it
+        def taskStackName = lookupCloudformationTaskProperty("stackName")
+        if(taskStackName) {
+            return taskStackName
+        }
+
         // If a stack prefix is specified, use it
         if(project.hasProperty("stackPrefix")) {
             return "${project.stackPrefix}-${project.stackName}"
@@ -78,18 +84,32 @@ class CloudformationDeployTask extends DefaultTask {
             .toString()
     }
 
-    @Internal
-    private Object lookupAwsProperty(String propertyName, boolean required = false) {
-        // Look for properties in descending order from most specific sources to least specific
-
-        // First, check the task specific CloudFormation configuration
+    @Internal Object lookupCloudformationTaskProperty(String propertyName, boolean required = false) {
         def propertyValue = cloudformation?.hasProperty(propertyName) ? cloudformation?.getProperty(propertyName) : null
         if(propertyValue != null) {
             return propertyValue
         }
 
+        // If the property is required and missing, throw an exception to stop execution
+        else if(required) {
+            throw new MissingAwsPropertyException(propertyName)
+        }
+
+        return null
+    }
+
+    @Internal
+    private Object lookupAwsProperty(String propertyName, boolean required = false) {
+        // Look for properties in descending order from most specific sources to least specific
+
+        // First, check the task specific CloudFormation configuration
+        def cloudformationTaskValue = lookupCloudformationTaskProperty(propertyName, required)
+        if(cloudformationTaskValue != null) {
+            return cloudformationTaskValue
+        }
+
         // Second, check the subproject CloudFormation configuration
-        propertyValue = project.cloudformation?.hasProperty(propertyName) ? project.cloudformation?.getProperty(propertyName) : null
+        def propertyValue = project.cloudformation?.hasProperty(propertyName) ? project.cloudformation?.getProperty(propertyName) : null
         if(propertyValue != null) {
             return propertyValue
         }
