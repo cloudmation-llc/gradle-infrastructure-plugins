@@ -23,6 +23,7 @@ import org.apache.commons.text.CaseUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.GradleBuild
 
 import static groovy.io.FileType.FILES
 
@@ -54,6 +55,14 @@ class AwsProjectPlugin implements Plugin<Project> {
             subproject.extensions.create("aws", AwsConfigurationExtension.class)
             subproject.extensions.create("cloudformation", CloudformationConfigurationExtension.class)
 
+            // Add a custom method for registering group tasks
+            subproject.ext.deployAsGroup = { String taskName, String... tasksToRun ->
+                subproject.tasks.register(taskName, GradleBuild) {
+                    group "aws"
+                    tasks = tasksToRun as Collection<String>
+                }
+            }
+
             // Wait until subproject is completely evaluated
             subproject.afterEvaluate {
                 // Iterate through YAML templates and generate specific tasks
@@ -66,14 +75,14 @@ class AwsProjectPlugin implements Plugin<Project> {
                     def pathSubproject = subproject.projectDir.toPath()
                     def relativePath = pathProject.relativize(pathSubproject)
 
-                    task("lint${finalBaseName}", type: Exec) {
+                    tasks.register("lint${finalBaseName}", Exec) {
                         group "aws"
                         description "Run cfn-lint to validate ${relativePath}/${template.name}"
                         commandLine "cfn-lint"
                         args "-t", template.toString()
                     }
 
-                    task("deploy${finalBaseName}", type: CloudformationDeployTask) {
+                    tasks.register ("deploy${finalBaseName}", CloudformationDeployTask) {
                         dependsOn "lint${finalBaseName}"
                         group "aws"
                         description "Deploy stack from template ${relativePath}/${template.name}"
