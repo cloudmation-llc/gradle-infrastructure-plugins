@@ -1,3 +1,19 @@
+/**
+ * Copyright 2020 Cloudmation LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.cloudmation.gradle.aws
 
 import groovy.io.FileType
@@ -13,21 +29,27 @@ class AwsProjectSettingsPlugin implements Plugin<Settings> {
     @Override
     void apply(Settings settings) {
         def rootProjectPath = settings.rootDir.toPath()
+        def cloudformationDir = new File(settings.rootDir, "cloudformation")
 
-        new File(settings.rootDir, "templates").eachFileRecurse(FileType.FILES) { file ->
+        // Check if the 'cloudformation' directory exists, or stop if not found
+        if(!(cloudformationDir.exists())) {
+            return
+        }
+
+        // Deeply iterate through all files beneath cloudformation
+        cloudformationDir.eachFileRecurse(FileType.FILES) { file ->
             if(!(file.name.endsWith(".yml"))) {
                 // Skip non-YAML files
                 return
             }
 
-            def templateName = file.name.replaceAll(".yml", "")
             def parentPath = file.parentFile.toPath()
             def projectRelativePath = rootProjectPath.relativize(parentPath)
             def projectName = projectRelativePath.getName(projectRelativePath.getNameCount() - 1)
             def generatedProjectName = projectRelativePath
-                    .toString()
-                    .replaceAll("[/]", ".")
-                    .replace("templates.", "cloudformation:") + "." + templateName
+                .toString()
+                .replaceAll("[/]", ".")
+                .replace("cloudformation.", "cloudformation:")
 
             // Register subproject
             settings.include generatedProjectName
