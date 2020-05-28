@@ -16,6 +16,9 @@
 
 package com.cloudmation.gradle.aws
 
+import com.cloudmation.gradle.aws.config.AwsConfigurationExtension
+import com.cloudmation.gradle.aws.config.CloudformationConfigurationExtension
+import com.cloudmation.gradle.aws.config.TaskConfigurationExtension
 import org.apache.commons.text.CaseUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project

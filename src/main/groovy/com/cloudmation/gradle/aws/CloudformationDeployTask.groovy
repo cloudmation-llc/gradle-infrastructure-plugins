@@ -16,6 +16,7 @@
 
 package com.cloudmation.gradle.aws
 
+import com.cloudmation.gradle.aws.config.ConfigScope
 import com.cloudmation.gradle.util.AnsiColors
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
@@ -62,7 +63,7 @@ class CloudformationDeployTask extends DefaultTask {
     @Internal
     String getGeneratedStackName() {
         // If task a specific stack name configured, use it
-        def taskStackName = lookupCloudformationTaskProperty("stackName")
+        def taskStackName = lookupAwsProperty("stackName", ConfigScope.TASK)
         if(taskStackName) {
             return taskStackName
         }
@@ -84,53 +85,55 @@ class CloudformationDeployTask extends DefaultTask {
             .toString()
     }
 
-    @Internal Object lookupCloudformationTaskProperty(String propertyName, boolean required = false) {
-        def propertyValue = cloudformation?.hasProperty(propertyName) ? cloudformation?.getProperty(propertyName) : null
-        if(propertyValue != null) {
-            return propertyValue
-        }
-
-        // If the property is required and missing, throw an exception to stop execution
-        else if(required) {
-            throw new MissingAwsPropertyException(propertyName)
-        }
-
-        return null
+    @Internal
+    private Object lookupAwsProperty(String propertyName, ConfigScope... scopes = [
+        ConfigScope.TASK, ConfigScope.PROJECT, ConfigScope.ROOT_PROJECT]) {
+        return lookupAwsProperty(propertyName, false, scopes)
     }
 
     @Internal
-    private Object lookupAwsProperty(String propertyName, boolean required = false) {
-        // Look for properties in descending order from most specific sources to least specific
+    private Object lookupAwsProperty(String propertyName, boolean required, ConfigScope... scopes = [
+        ConfigScope.TASK, ConfigScope.PROJECT, ConfigScope.ROOT_PROJECT]) {
 
-        // First, check the task specific CloudFormation configuration
-        def cloudformationTaskValue = lookupCloudformationTaskProperty(propertyName, required)
-        if(cloudformationTaskValue != null) {
-            return cloudformationTaskValue
+        // Walk through scopes looking for the first non-null property value
+        def propertyResult = scopes.findResult { scope ->
+            if(scope == ConfigScope.TASK) {
+                // Check the cloudformation config for the task
+                def propertyValue = cloudformation?.hasProperty(propertyName) ? cloudformation?.getProperty(propertyName) : null
+                if(propertyValue != null) {
+                    return propertyValue
+                }
+            }
+            else if(scope == ConfigScope.PROJECT) {
+                // Check the cloudformation config for the project
+                def propertyValue = project.cloudformation?.hasProperty(propertyName) ? project.cloudformation?.getProperty(propertyName) : null
+                if(propertyValue != null) {
+                    return propertyValue
+                }
+
+                // Check the AWS config for the project
+                propertyValue = project.aws?.hasProperty(propertyName) ? project.aws?.getProperty(propertyName) : null
+                if(propertyValue != null) {
+                    return propertyValue
+                }
+            }
+            else if(scope == ConfigScope.ROOT_PROJECT) {
+                // Check the AWS config the root project
+                def propertyValue = project.rootProject.aws?.hasProperty(propertyName) ? project.rootProject.aws?.getProperty(propertyName) : null
+                if(propertyValue != null) {
+                    return propertyValue
+                }
+            }
+
+            return null
         }
 
-        // Second, check the subproject CloudFormation configuration
-        def propertyValue = project.cloudformation?.hasProperty(propertyName) ? project.cloudformation?.getProperty(propertyName) : null
-        if(propertyValue != null) {
-            return propertyValue
-        }
-
-        // Third, check the subproject AWS configuration
-        propertyValue = project.aws?.hasProperty(propertyName) ? project.aws?.getProperty(propertyName) : null
-        if(propertyValue != null) {
-            return propertyValue
-        }
-
-        // Lastly, check root project AWS configuration
-        propertyValue = project.rootProject.aws?.hasProperty(propertyName) ? project.rootProject.aws?.getProperty(propertyName) : null
-        if(propertyValue != null) {
-            return propertyValue
-        }
-        // If the property is required and missing, throw an exception to stop execution
-        else if(required) {
+        // If no property was found, and it is required, raise an exception
+        if(required && propertyResult == null) {
             throw new MissingAwsPropertyException(propertyName)
         }
 
-        return null
+        return propertyResult
     }
 
     @Internal
@@ -141,14 +144,11 @@ class CloudformationDeployTask extends DefaultTask {
 
     /**
      * Check for resource tags can be applied to the stack at deployment. Tags are scanned from least specific
-     * (i.e. the root project) to the most specific
-     * @param handler
+     * source (i.e. the root project) to the most specific source.
+     * @param handler Called with the tag collection if at least one tag is defined
      */
     @Internal
     private void withAwsTags(Closure handler) {
-        // Look for tags from least specific to most specific. Tags defined at more specific layers
-        // can override those from less specific layers.
-
         def output = new HashMap<String, String>()
 
         // First, check root project AWS configuration
@@ -178,9 +178,9 @@ class CloudformationDeployTask extends DefaultTask {
     }
 
     /**
-     * Check for parameter overrides that can be applied against the template to deploy. Parameters can be defined
-     * in the subproject, or per task. Parameters overrides for the task will override those defined at the
-     * subproject project.
+     * Check for parameter overrides that can be applied against the template during deployment.
+     * Parameters can be defined in the subproject, or per task. Parameters overrides for the task will override
+     * those defined at the project level.
      * @param handler Called with the parameter collection if at least one parameter is defined
      */
     @Internal
@@ -369,8 +369,7 @@ class CloudformationDeployTask extends DefaultTask {
     }
 
     /**
-     * Check if the named stack already exists. Special treatment is applied if a stack is in the
-     * REVIEW_IN_PROGRESS state.
+     * Check if the named stack already exists. Special treatment is applied if a stack is in the REVIEW_IN_PROGRESS state.
      * @param stackName Name of the stack
      * @return True if the stack exists
      */
