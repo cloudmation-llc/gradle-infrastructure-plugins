@@ -44,8 +44,12 @@ import java.util.concurrent.ExecutionException
 class CloudformationDeployTask extends DefaultTask {
 
     protected CloudFormationClient cloudformationClient
-    private boolean doNotExecute = false
-    private boolean doNotCreate = false
+
+    @Internal
+    boolean doNotExecute = false
+
+    @Internal
+    boolean doNotCreate = false
 
     @Input String stackName
     @InputFile File templateFile
