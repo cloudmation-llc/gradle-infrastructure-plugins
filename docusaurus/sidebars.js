@@ -2,12 +2,16 @@ module.exports = {
   mainSidebar: [
     {
       type: 'doc',
-      id: 'welcome'
+      id: 'about'
     },
     {
       type: 'category',
-      label: 'Amazon',
-      items: ['doc1', 'doc2', 'doc3']
+      label: 'AWS (Amazon Web Services)',
+      items: [
+        'aws/aws-getting-started',
+        'aws/aws-tutorial',
+        'aws/aws-roadmap'
+      ]
     }
   ]
 };

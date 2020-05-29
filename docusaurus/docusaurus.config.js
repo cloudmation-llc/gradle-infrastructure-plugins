@@ -1,5 +1,5 @@
 module.exports = {
-  title: 'Cloudmation Gradle Project Plugins',
+  title: 'Gradle Project Plugins by Cloudmation',
   url: 'https://your-docusaurus-test-site.com',
   baseUrl: '/',
   favicon: 'img/favicon.ico',
@@ -8,14 +8,14 @@ module.exports = {
   themeConfig: {
     disableDarkMode: true,
     navbar: {
-      title: 'Cloudmation Gradle Project Plugins',
+      title: 'Gradle Project Plugins by Cloudmation',
       logo: {
         alt: 'Cloudmation LLC Logo',
         src: 'img/logo.svg',
       },
       links: [
         {
-          href: 'https://github.com/facebook/docusaurus',
+          href: 'https://github.com/cloudmation-llc/cloudmation-gradle-project-plugins',
           label: 'GitHub',
           position: 'right',
         },
@@ -29,11 +29,11 @@ module.exports = {
           items: [
             {
               label: 'Style Guide',
-              to: 'docs/doc1',
+              to: 'doc1',
             },
             {
               label: 'Second Doc',
-              to: 'docs/doc2',
+              to: 'doc2',
             },
           ],
         },
@@ -42,7 +42,7 @@ module.exports = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
+              href: 'https://github.com/cloudmation-llc/cloudmation-gradle-project-plugins',
             },
           ],
         },
@@ -56,10 +56,10 @@ module.exports = {
       {
         docs: {
           routeBasePath: '/',
-          sidebarPath: require.resolve('./sidebars.js'),
+          sidebarPath: require.resolve('./sidebars.js')/*,
           // Please change this to your repo.
           editUrl:
-            'https://github.com/facebook/docusaurus/edit/master/website/',
+            'https://github.com/facebook/docusaurus/edit/master/website/',*/
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
