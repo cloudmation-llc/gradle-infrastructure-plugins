@@ -1,0 +1,3 @@
+[submodule "template-starter"]
+	path = template-starter
+	url = git@github.com:cloudmation-llc/cloudmation-gradle-aws-starter.git
