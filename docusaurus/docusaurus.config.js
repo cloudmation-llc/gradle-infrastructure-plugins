@@ -7,6 +7,9 @@ module.exports = {
   projectName: 'cloudmation-gradle-project-plugins', // Usually your repo name.
   themeConfig: {
     disableDarkMode: true,
+    prism: {
+      additionalLanguages: ['groovy', 'properties']  
+    },
     navbar: {
       title: 'Gradle Project Plugins by Cloudmation',
       logo: {
@@ -62,8 +65,8 @@ module.exports = {
             'https://github.com/facebook/docusaurus/edit/master/website/',*/
         },
         theme: {
-          customCss: require.resolve('./src/css/custom.css'),
-        },
+          customCss: require.resolve('./src/css/custom.css')
+        }
       },
     ],
   ],

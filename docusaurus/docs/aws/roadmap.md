@@ -6,9 +6,13 @@ sidebar_label: Roadmap
 
 Ideas for new directions and functionality to add to the plugins.
 
+* Support for MFA
+* Some of the applied conventions are hard set. Make these more configurable over time.
+* Investigate proper support for using stack sets through the SDK
 * Development of custom CloudFormation resources using Lambda functions
 * General support for Lambda projects
-* Terraform support
+* CDK support
+* Terraform support (both complementary to CloudFormation, and an alternative)
 * Packer for building and deploying custom AMIs
 * Creation and management of SSM documents
   * Support for Ansible playbooks
