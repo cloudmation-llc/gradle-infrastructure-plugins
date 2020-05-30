@@ -17,6 +17,7 @@
 package com.cloudmation.gradle.aws
 
 import com.cloudmation.gradle.aws.config.ConfigScope
+import com.cloudmation.gradle.aws.traits.ParameterOverridesContainer
 import com.cloudmation.gradle.util.AnsiColors
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
@@ -41,7 +42,7 @@ import java.util.concurrent.ExecutionException
  * Useful features such as stack tagging are easily configurable and allow for the creation of sensible organization
  * defaults to organize stacks and the resources managed by them.
  */
-class CloudformationDeployTask extends DefaultTask {
+class CloudformationDeployTask extends DefaultTask implements ParameterOverridesContainer {
 
     protected CloudFormationClient cloudformationClient
 
@@ -199,12 +200,12 @@ class CloudformationDeployTask extends DefaultTask {
             output << project.cloudformation.parameterOverrides
         }
 
-        // Lastly, check the task specific CloudFormation configuration
-        if(cloudformation?.hasParameterOverrides()) {
-            output << cloudformation.parameterOverrides
+        // Check task specific parameter overrides
+        if(hasParameterOverrides()) {
+            output << parameterOverrides
         }
 
-        // If we captured at least one tag, then call the handler with the collection
+        // If we captured at least one parameter, then call the handler with the collection
         if(output.size() > 0) {
             handler(output)
         }
@@ -275,8 +276,10 @@ class CloudformationDeployTask extends DefaultTask {
 
         // Optionally, set capabilities (example: IAM) that may be needed for stack execution
         withAwsProperty("capabilities") { List<String> capabilities ->
-            logger.lifecycle("Applying capabilities ${capabilities} to deployment")
-            createChangeSetRequestBuilder.capabilitiesWithStrings(capabilities)
+            if(capabilities.size() > 0) {
+                logger.lifecycle("Applying capabilities ${capabilities} to deployment")
+                createChangeSetRequestBuilder.capabilitiesWithStrings(capabilities)
+            }
         }
 
         // Optionally, add tags

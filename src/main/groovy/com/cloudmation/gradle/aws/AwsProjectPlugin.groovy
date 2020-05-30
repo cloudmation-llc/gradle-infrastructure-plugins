@@ -18,8 +18,9 @@ package com.cloudmation.gradle.aws
 
 import com.cloudmation.gradle.aws.config.AwsConfigurationExtension
 import com.cloudmation.gradle.aws.config.CloudformationConfigurationExtension
-import com.cloudmation.gradle.aws.config.TaskConfigurationExtension
+
 import org.apache.commons.text.CaseUtils
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
@@ -33,7 +34,7 @@ import static groovy.io.FileType.FILES
  */
 class AwsProjectPlugin implements Plugin<Project> {
 
-    private static final char[] camelCaseDelimiters = ['.', '-', ' '] as char[]
+    private static final char[] camelCaseDelimiters = ['.', '-', ' ', '_'] as char[]
 
     @Override
     void apply(Project project) {
@@ -46,14 +47,22 @@ class AwsProjectPlugin implements Plugin<Project> {
                 return
             }
 
-            // Apply task configuration extension to subproject
-            def taskConfigExtension = subproject
-                .extensions
-                .create("taskConfig", TaskConfigurationExtension.class)
-
             // Apply AWS configuration extension to subproject
             subproject.extensions.create("aws", AwsConfigurationExtension.class)
-            subproject.extensions.create("cloudformation", CloudformationConfigurationExtension.class)
+
+            // Apply CloudFormation specific configuration extension to subproject
+            /*
+            TODO: Look into registering the same configuration extension instance
+            under multiple names rather than separate ones for "aws" and "cloudformation"
+            namespace. This could also lead to a notable simplification of nested property lookups
+             */
+            def cfConfig = subproject.extensions.create("cloudformation", CloudformationConfigurationExtension.class)
+
+            // Add a CloudFormation custom stack extension
+            NamedDomainObjectContainer<CloudformationDeployTaskCreationSpec> deployTaskCreationContainer =
+                subproject.container(CloudformationDeployTaskCreationSpec)
+
+            cfConfig.extensions.add("stacks", deployTaskCreationContainer)
 
             // Add a custom method for registering group tasks
             subproject.ext.deployAsGroup = { String taskName, String... tasksToRun ->
@@ -69,11 +78,17 @@ class AwsProjectPlugin implements Plugin<Project> {
                 subproject.projectDir.eachFileMatch(FILES, ~/.*(y[a]?ml)/, { File template ->
                     def (baseName, extension) = template.name.split("[.]")
                     def camelBaseName = CaseUtils.toCamelCase(baseName, true, camelCaseDelimiters)
-                    def camelTaskPrefix = CaseUtils.toCamelCase(taskConfigExtension.prefix ?: "", true, camelCaseDelimiters)
+                    def camelTaskPrefix = CaseUtils.toCamelCase(cfConfig.taskPrefix ?: "", true, camelCaseDelimiters)
                     def finalBaseName = "${camelTaskPrefix}${camelBaseName}"
                     def pathProject = project.projectDir.toPath()
                     def pathSubproject = subproject.projectDir.toPath()
                     def relativePath = pathProject.relativize(pathSubproject)
+
+                    if(cfConfig.taskCreationFilter) {
+                        if(!(cfConfig.taskCreationFilter(finalBaseName))) {
+                            return
+                        }
+                    }
 
                     tasks.register("lint${finalBaseName}", Exec) {
                         group "aws"
@@ -90,6 +105,37 @@ class AwsProjectPlugin implements Plugin<Project> {
                         templateFile = template
                     }
                 })
+
+                // Iterate through custom stack definitions
+                def customStacks = cfConfig.extensions.getByName('stacks')
+                customStacks.all { creationSpec ->
+                    def camelBaseName = CaseUtils.toCamelCase(creationSpec.name, true, camelCaseDelimiters)
+                    def camelTaskPrefix = CaseUtils.toCamelCase(cfConfig.taskPrefix ?: "", true, camelCaseDelimiters)
+                    def finalBaseName = "${camelTaskPrefix}${camelBaseName}"
+
+                    def specStackName = creationSpec?.stackName?.get()
+                    def specTemplateFile = creationSpec?.template?.get()
+
+                    tasks.register("lint${finalBaseName}", Exec) {
+                        group "aws"
+                        description "Run cfn-lint to validate ${creationSpec.template.get().name} for custom stack ${specStackName}"
+                        commandLine "cfn-lint"
+                        args "-t", specTemplateFile.toString()
+                    }
+
+                    tasks.register ("deploy${finalBaseName}", CloudformationDeployTask) {
+                        dependsOn "lint${finalBaseName}"
+                        group "aws"
+                        description "Deploy custom stack ${specStackName}"
+                        stackName = specStackName
+                        templateFile = specTemplateFile
+
+                        // Optionally, add parameter overrides
+                        if(creationSpec.hasParameterOverrides()) {
+                            parameterOverrides << creationSpec.parameterOverrides
+                        }
+                    }
+                }
 
                 // Apply AWS configuration extension to each deploy task
                 subproject.tasks.withType(CloudformationDeployTask.class) { task ->
