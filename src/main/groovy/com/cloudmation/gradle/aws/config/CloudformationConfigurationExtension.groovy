@@ -22,17 +22,21 @@ class CloudformationConfigurationExtension extends AwsConfigurationExtension {
 
     private List<Closure> changesetBuilderClosures = new ArrayList<>()
 
-    List<String> capabilities
+    List<String> capabilities = new ArrayList<>()
     Boolean failOnEmptyChangeset
-    Map<String, String> parameterOverrides
+    Map<String, String> parameterOverrides = new HashMap<>()
     String roleArn
     String stackName
+    Closure<String> taskCreationFilter
+    String taskPrefix
+
+    /*
+    TODO: Add methods to include or exclude tasks by pattern or custom closure
+    or by a closure. Allow the implementer flexibility and control over
+    how the automated conventions are applied
+     */
 
     void capability(String capabilityName) {
-        if(capabilities == null) {
-            capabilities = new ArrayList<>()
-        }
-
         capabilities.add(capabilityName)
     }
 
@@ -45,10 +49,6 @@ class CloudformationConfigurationExtension extends AwsConfigurationExtension {
     }
 
     void parameterOverride(String key, String value) {
-        if(parameterOverrides == null) {
-            parameterOverrides = new HashMap<>()
-        }
-
         parameterOverrides.put(key, value)
     }
 
