@@ -36,28 +36,31 @@ class AwsProjectSettingsPlugin implements Plugin<Settings> {
             return
         }
 
-        // Deeply iterate through all files beneath cloudformation
-        cloudformationDir.eachFileRecurse(FileType.FILES) { file ->
-            if(!(file.name.endsWith(".yml"))) {
-                // Skip non-YAML files
-                return
-            }
+        // Deeply iterate through all directories beneath $ROOT/cloudformation
+        cloudformationDir.eachFileRecurse(FileType.DIRECTORIES) { projectDir ->
+            // Skip . directories
+            if(projectDir.name[0] == ".") return
 
-            def parentPath = file.parentFile.toPath()
-            def projectRelativePath = rootProjectPath.relativize(parentPath)
-            def projectName = projectRelativePath.getName(projectRelativePath.getNameCount() - 1)
+            // Skip hidden directories
+            if(projectDir.hidden) return
+
+            // Use paths to generate a hierarchical project name
+            def projectPath = projectDir.toPath()
+            def projectRelativePath = rootProjectPath.relativize(projectPath)
+            def projectName = projectDir.name
             def generatedProjectName = projectRelativePath
                 .toString()
-                .replaceAll("[/]", ".")
-                .replace("cloudformation.", "cloudformation:")
+                .replaceAll("[/]", ":")
+            def gradleProjectName = ":${generatedProjectName}"
+            def gradleFilename = "${projectName}.gradle"
 
-            // Register subproject
+            // Register the subproject
             settings.include generatedProjectName
-            settings.project(":${generatedProjectName}").projectDir = file.getParentFile()
-            settings.project(":${generatedProjectName}").buildFileName = "${projectName}.gradle"
+            settings.project(gradleProjectName).projectDir = projectDir
+            settings.project(gradleProjectName).buildFileName = gradleFilename
 
             // Check (and create) a Gradle build file for the subproject
-            def gradleFile = new File("${projectRelativePath}/${projectName}.gradle")
+            def gradleFile = new File(projectDir, gradleFilename)
             if(!(gradleFile.exists())) {
                 gradleFile.createNewFile()
             }
