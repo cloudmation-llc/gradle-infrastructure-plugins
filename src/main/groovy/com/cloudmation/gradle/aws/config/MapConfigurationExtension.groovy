@@ -28,8 +28,10 @@ class MapConfigurationExtension {
         return propertyStorage.get(key)
     }
 
-    def addScope(String name) {
-        return extensions.create(name, MapConfigurationExtension.class)
+    def createScope(String name) {
+        def extension = extensions.create(name, MapConfigurationExtension.class)
+        propertyStorage.put(name, extension)
+        return extension
     }
 
 }

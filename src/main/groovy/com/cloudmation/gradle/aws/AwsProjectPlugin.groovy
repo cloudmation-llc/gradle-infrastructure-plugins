@@ -18,8 +18,6 @@ package com.cloudmation.gradle.aws
 
 import com.cloudmation.gradle.aws.cloudformation.CloudformationDeployTask
 import com.cloudmation.gradle.aws.cloudformation.CloudformationDeployTaskCreationSpec
-import com.cloudmation.gradle.aws.config.AwsConfigurationExtension
-import com.cloudmation.gradle.aws.config.CloudformationConfigurationExtension
 import com.cloudmation.gradle.aws.config.MapConfigurationExtension
 import org.apache.commons.text.CaseUtils
 import org.gradle.api.NamedDomainObjectContainer
@@ -51,7 +49,7 @@ class AwsProjectPlugin implements Plugin<Project> {
 
             // Create AWS configuration extension on subproject
             def awsConfigProject = subproject.extensions.create("aws", MapConfigurationExtension.class)
-            def cfConfig = awsConfigProject.addScope("cloudformation")
+            def cfConfig = awsConfigProject.createScope("cloudformation")
 
             // Add a CloudFormation custom stack DSL
             NamedDomainObjectContainer<CloudformationDeployTaskCreationSpec> deployTaskCreationContainer =
@@ -137,7 +135,7 @@ class AwsProjectPlugin implements Plugin<Project> {
                 subproject.tasks.withType(CloudformationDeployTask.class) { task ->
                     // Create AWS configuration extension on subproject
                     def awsConfig = task.extensions.create("aws", MapConfigurationExtension.class)
-                    awsConfig.addScope("cloudformation")
+                    awsConfig.createScope("cloudformation")
                 }
             }
         }
