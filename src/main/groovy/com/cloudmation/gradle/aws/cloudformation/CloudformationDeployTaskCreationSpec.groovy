@@ -1,4 +1,4 @@
-package com.cloudmation.gradle.aws
+package com.cloudmation.gradle.aws.cloudformation
 
 import com.cloudmation.gradle.aws.traits.ParameterOverridesContainer
 import org.gradle.api.model.ObjectFactory

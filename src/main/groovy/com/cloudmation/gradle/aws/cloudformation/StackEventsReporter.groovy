@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws
+package com.cloudmation.gradle.aws.cloudformation
 
 import com.cloudmation.gradle.util.AnsiColors
 import software.amazon.awssdk.services.cloudformation.model.DescribeStackEventsRequest

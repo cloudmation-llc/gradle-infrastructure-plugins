@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws
+package com.cloudmation.gradle.aws.cloudformation
 
-class EmptyChangesetException extends RuntimeException {
+class ChangesetStatusException extends RuntimeException {
 
-    EmptyChangesetException() {
-        super("The submitted changeset didn't contain changes")
+    ChangesetStatusException(String message) {
+        super(message)
     }
 
 }

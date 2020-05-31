@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws
+package com.cloudmation.gradle.aws.cloudformation
 
 import org.gradle.api.logging.Logger
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient

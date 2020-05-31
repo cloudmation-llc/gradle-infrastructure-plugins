@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws
+package com.cloudmation.gradle.aws.cloudformation
 
+import com.cloudmation.gradle.aws.MissingAwsPropertyException
 import com.cloudmation.gradle.aws.config.ConfigScope
 import com.cloudmation.gradle.aws.traits.ParameterOverridesContainer
 import com.cloudmation.gradle.util.AnsiColors
