@@ -6,6 +6,8 @@ import org.gradle.api.provider.Property
 
 class CloudformationDeployTaskCreationSpec implements ParameterOverridesContainer {
 
+    // TODO: Extend MapConfigurationExtension for more flexibility
+
     private final String name
     private Property<String> stackName
     private Property<File> template

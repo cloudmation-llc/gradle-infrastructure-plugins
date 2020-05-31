@@ -16,9 +16,11 @@
 
 package com.cloudmation.gradle.aws
 
+import com.cloudmation.gradle.aws.cloudformation.CloudformationDeployTask
+import com.cloudmation.gradle.aws.cloudformation.CloudformationDeployTaskCreationSpec
 import com.cloudmation.gradle.aws.config.AwsConfigurationExtension
 import com.cloudmation.gradle.aws.config.CloudformationConfigurationExtension
-
+import com.cloudmation.gradle.aws.config.MapConfigurationExtension
 import org.apache.commons.text.CaseUtils
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
@@ -38,8 +40,8 @@ class AwsProjectPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        // Apply AWS configuration extension to root project
-        project.extensions.create("aws", AwsConfigurationExtension.class)
+        // Create AWS configuration extension on root project
+        project.extensions.create("aws", MapConfigurationExtension.class)
 
         project.subprojects { Project subproject ->
             // Skip ":cloudformation" subproject
@@ -47,18 +49,11 @@ class AwsProjectPlugin implements Plugin<Project> {
                 return
             }
 
-            // Apply AWS configuration extension to subproject
-            subproject.extensions.create("aws", AwsConfigurationExtension.class)
+            // Create AWS configuration extension on subproject
+            def awsConfigProject = subproject.extensions.create("aws", MapConfigurationExtension.class)
+            def cfConfig = awsConfigProject.addScope("cloudformation")
 
-            // Apply CloudFormation specific configuration extension to subproject
-            /*
-            TODO: Look into registering the same configuration extension instance
-            under multiple names rather than separate ones for "aws" and "cloudformation"
-            namespace. This could also lead to a notable simplification of nested property lookups
-             */
-            def cfConfig = subproject.extensions.create("cloudformation", CloudformationConfigurationExtension.class)
-
-            // Add a CloudFormation custom stack extension
+            // Add a CloudFormation custom stack DSL
             NamedDomainObjectContainer<CloudformationDeployTaskCreationSpec> deployTaskCreationContainer =
                 subproject.container(CloudformationDeployTaskCreationSpec)
 
@@ -116,6 +111,7 @@ class AwsProjectPlugin implements Plugin<Project> {
                     def specStackName = creationSpec?.stackName?.get()
                     def specTemplateFile = creationSpec?.template?.get()
 
+                    // TODO: Allow override of the group property
                     tasks.register("lint${finalBaseName}", Exec) {
                         group "aws"
                         description "Run cfn-lint to validate ${creationSpec.template.get().name} for custom stack ${specStackName}"
@@ -137,9 +133,11 @@ class AwsProjectPlugin implements Plugin<Project> {
                     }
                 }
 
-                // Apply AWS configuration extension to each deploy task
+                // Create AWS configuration extension on each deploy task
                 subproject.tasks.withType(CloudformationDeployTask.class) { task ->
-                    task.extensions.create("cloudformation", CloudformationConfigurationExtension.class)
+                    // Create AWS configuration extension on subproject
+                    def awsConfig = task.extensions.create("aws", MapConfigurationExtension.class)
+                    awsConfig.addScope("cloudformation")
                 }
             }
         }
