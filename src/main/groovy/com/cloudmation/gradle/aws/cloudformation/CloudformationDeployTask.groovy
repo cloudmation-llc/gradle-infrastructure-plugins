@@ -96,36 +96,6 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
         return "${project.name}-${getTemplateName()}"
     }
 
-    /**
-     * Check for parameter overrides that can be applied against the template during deployment.
-     * Parameters can be defined in the subproject, or per task. Parameters overrides for the task will override
-     * those defined at the project level.
-     * @param handler Called with the parameter collection if at least one parameter is defined
-     */
-    @Internal
-    @Deprecated
-    private void withCloudformationParameters(Closure handler) {
-        // Look for tags from least specific to most specific. Tags defined at more specific layers
-        // can override those from less specific layers.
-
-        def output = new HashMap<String, String>()
-
-        // First, check the subproject CloudFormation configuration
-        if(project.cloudformation?.hasParameterOverrides()) {
-            output << project.cloudformation.parameterOverrides
-        }
-
-        // Check task specific parameter overrides
-        if(hasParameterOverrides()) {
-            output << parameterOverrides
-        }
-
-        // If we captured at least one parameter, then call the handler with the collection
-        if(output.size() > 0) {
-            handler(output)
-        }
-    }
-
     @TaskAction
     void deploy() {
         // Create a CloudFormation client builder
@@ -202,7 +172,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
         // Optionally, add resource tags merging from root project to task specific
         def tags = lookupAwsPropertySources()
             .reverse()
-            .findResults({ it.aws?.tags })
+            .findResults { it.aws?.tags }
             .inject(new HashMap()) { Map result, Map tags ->
                 result.putAll(tags)
                 result
@@ -215,18 +185,23 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
         }
 
         // Optionally, add parameter overrides
-        // TODO: Use the same tag logic above to isolate parameter overrides
-        withCloudformationParameters { Map<String, String> parameters ->
-            logger.lifecycle("Applying parameter overrides ${parameters} to deployment")
-            def mappedParams = parameters.collect { String key, String value ->
-                Parameter.builder().parameterKey(key).parameterValue(value).build()
+        def parameterOverrides = lookupAwsPropertySources()
+            .reverse()
+            .findResults { it.aws?.cloudformation?.parameterOverrides }
+            .inject(new HashMap()) { Map result, Map parameters ->
+                result.putAll(parameters)
+                result
             }
-            createChangeSetRequestBuilder.parameters(mappedParams)
+            .collect { key, value -> Parameter.builder().parameterKey(key).parameterValue(value).build() }
+
+        if(parameterOverrides.size() > 0) {
+            createChangeSetRequestBuilder.parameters(parameterOverrides)
         }
 
-        // Apply changeset builder reconfigurations from project
-        project.cloudformation?.applyChangesetBuilderClosures(createChangeSetRequestBuilder)
-        cloudformation?.applyChangesetBuilderClosures(createChangeSetRequestBuilder)
+        // Optionally, apply custom changeset builder reconfiguration
+        lookupAwsProperty
+            { it.aws?.cloudformation?.configureChangeset }
+            .ifPresent({ handler -> handler(createChangeSetRequestBuilder) })
 
         // Complete the build of the changeset request
         def createChangesetRequest = createChangeSetRequestBuilder.build()
@@ -243,9 +218,13 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
         def changesetCreationResponse = cloudformationClient.createChangeSet(createChangesetRequest)
         def changesetArn = changesetCreationResponse.id()
 
-        // Wait for the changeset to be created
-        def failOnEmptyChangeset = lookupAwsProperty("failOnEmptyChangeset") ?: false // TODO Fix this
+        // Check if the build should fail because the changeset is empty
+        def failOnEmptyChangeset = lookupAwsProperty
+            { it.aws?.cloudformation?.failOnEmptyChangeset }
+            .orElse(false)
+
         try {
+            // Wait for the changeset to be created
             new ChangesetStatusWaiter()
                 .withCloudFormationClient(cloudformationClient)
                 .withGradleLogger(logger)
