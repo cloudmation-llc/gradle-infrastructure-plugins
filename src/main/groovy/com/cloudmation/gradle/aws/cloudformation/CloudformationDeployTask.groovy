@@ -194,7 +194,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
         createChangeSetRequestBuilder.templateBody(templateFile.text as String)
 
         // Optionally, set the IAM role for CloudFormation to assume when executing the stack
-        lookupAwsProperty { it.aws?.roleArn } . ifPresent { String roleArn ->
+        lookupAwsProperty { it.aws?.cloudformation?.roleArn } . ifPresent { String roleArn ->
             logger.lifecycle("Using role ARN ${roleArn} for deployment")
             createChangeSetRequestBuilder.roleARN(roleArn)
         }
