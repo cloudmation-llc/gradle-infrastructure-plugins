@@ -1,5 +1,5 @@
 ---
-id: aws-getting-started
+id: cf-getting-started
 title: Getting Started
 sidebar_label: Getting Started
 ---
@@ -35,7 +35,7 @@ A helper script is provided that will clone the template repo, and then replace 
 Copy and paste the line below to download and run the `create-aws-project.sh` script straight from GitHub. Replace `YOUR_DIRECTORY` with a destination name of your choosing.
 
 ```bash
- curl -L "https://raw.githubusercontent.com/cloudmation-llc/cloudmation-gradle-project-plugins/master/create-aws-project.sh" | bash -s YOUR_DIRECTORY
+ curl -L "https://raw.githubusercontent.com/cloudmation-llc/gradle-infrastructure-plugins/master/create-aws-project.sh" | bash -s YOUR_DIRECTORY
 ```
 
 ### Manual Installation
@@ -52,25 +52,26 @@ Alternatively, you can set up a new project yourself by going through a few manu
 
 3. It is recommended to externalize the plugin version as a Gradle property. Copy and paste the following into `gradle.properties`.
 
-Check the Gradle plugins portal for the latest version string: https://plugins.gradle.org/plugin/com.cloudmation.aws-project-settings
+Check the Gradle plugins portal for the latest version string: https://plugins.gradle.org/plugin/com.cloudmation.aws
 
 ```properties
-cloudmationGradlePluginsVersion = VERSION_HERE
+cloudmationInfraPluginsVersion = VERSION_HERE
 ```
 
-4. Add the AWS project settings plugin to `settings.gradle`.
+1. Add the AWS project settings plugin to `settings.gradle`.
 
 ```groovy
 plugins {
-    id "com.cloudmation.aws-project-settings" version "$cloudmationGradlePluginsVersion"
+    id "com.cloudmation.aws-settings-cloudformation" version "$cloudmationInfraPluginsVersion"
 }
 ```
 
-5. Add the AWS project config plugin to `build.gradle`.
+5. Add the AWS project config and CloudFormation plugins to `build.gradle`.
 
 ```groovy
 plugins {
-    id "com.cloudmation.aws-project"
+    id "com.cloudmation.aws"
+    id "com.cloudmation.aws-cloudformation"
 }
 ```
 

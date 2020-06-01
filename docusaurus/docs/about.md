@@ -10,7 +10,7 @@ A set of plugins for [Gradle](https://gradle.org/) that provide an opinionated s
 
 Deploying and managing cloud infrastructure using configuration-as-code in this author's view is vital for long term success. When you consider that cloud providers provide official tooling for their services, add into the mix community projects for linting, static analysis, image building, host automation, and more . . . the amount tools that you end up using manage your cloud environment can be significant.
 
-Those who develop software and libraries have long understood this problem, and the community has built excellent tools to solve it. This is where Gradle comes in. Gradle is not just well suited for software development projects, it can also be great for "developing" your infrastructure, too.
+Those who develop software have long understood this problem, and the community has built excellent tools to solve it. This is where Gradle comes in. Gradle is not just well suited organizing software development projects, it can also be great for "developing" your infrastructure, too.
 
 ## Why Infrastructure as Code?
 
@@ -23,6 +23,8 @@ In contrast, were you to interact with your cloud provider exclusively through a
 ### Gradle Crash Course
 
 Paraphrasing from the page [What is Gradle](https://docs.gradle.org/current/userguide/what_is_gradle.html#what_is_gradle), projects are made easy to build by implementing conventions. You can show up and not need to think deeply about how your infrastructure templates/code/pipelines/plans/playbooks should be organized. Gradle can automate that for you. The beauty of Gradle is that while there are recommended conventions that work well out of the box, it is very easy to override and customize to suit specific needs.
+
+See also [Convention over Configuration _(Organizing Gradle Projects)_](https://docs.gradle.org/current/userguide/organizing_gradle_projects.html#sec:use_standard_conventions)
 
 #### The "Root" Project
 
@@ -47,4 +49,4 @@ Effective use of subprojects are one of the highlights when you use this plugin 
 
 #### Tasks
 
-Gradle projects define tasks that go and perform actual work. Tasks can be created at the root for the entire project including children subprojects, or a subproject may define its own tasks for specific uses.
+Gradle projects define tasks that go and perform actual work. Tasks can be created at the root for the entire project including children subprojects, or a subproject may define its own tasks for specific needs.

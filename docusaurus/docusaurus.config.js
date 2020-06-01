@@ -1,24 +1,24 @@
 module.exports = {
-  title: 'Gradle Project Plugins by Cloudmation',
+  title: 'Infrastructure Gradle Plugins by Cloudmation',
   url: 'https://your-docusaurus-test-site.com',
   baseUrl: '/',
   favicon: 'img/favicon.ico',
-  organizationName: 'cloudmation-llc', // Usually your GitHub org/user name.
-  projectName: 'cloudmation-gradle-project-plugins', // Usually your repo name.
+  organizationName: 'cloudmation-llc',
+  projectName: 'gradle-infrastructure-plugins',
   themeConfig: {
     disableDarkMode: true,
     prism: {
       additionalLanguages: ['groovy', 'properties']  
     },
     navbar: {
-      title: 'Gradle Project Plugins by Cloudmation',
+      title: 'Infrastructure Gradle Plugins by Cloudmation',
       logo: {
         alt: 'Cloudmation LLC Logo',
         src: 'img/logo.svg',
       },
       links: [
         {
-          href: 'https://github.com/cloudmation-llc/cloudmation-gradle-project-plugins',
+          href: 'https://github.com/cloudmation-llc/gradle-infrastructure-plugins',
           label: 'GitHub',
           position: 'right',
         },
@@ -45,7 +45,7 @@ module.exports = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/cloudmation-llc/cloudmation-gradle-project-plugins',
+              href: 'https://github.com/cloudmation-llc/gradle-infrastructure-plugins',
             },
           ],
         },

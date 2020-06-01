@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Clone the template repo to the target directory
-git clone git@github.com:cloudmation-llc/cloudmation-gradle-aws-starter.git $1
+git clone git@github.com:cloudmation-llc/gradle-aws-starter.git $1
 
 # Change into the target directory
 cd $1
