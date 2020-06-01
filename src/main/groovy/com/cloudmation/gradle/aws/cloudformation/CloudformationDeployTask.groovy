@@ -68,8 +68,13 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
     }
 
     @Internal
+    String getTemplateName() {
+        return templateFile.name.split("[.]")[0]
+    }
+
+    @Internal
     String getGeneratedStackName() {
-        // If the task sets a specific stack name configured, use it
+        // Check if the task defines a specific stack name
         def taskStackName = lookupAwsProperty(
             { it.aws?.cloudformation?.stackName },
             ConfigScope.TASK)
@@ -78,24 +83,17 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
             return taskStackName.get()
         }
 
-        /*
-        TODO: Figure out what to do with this
-        // If a stack prefix is specified, use it
-        if(project.hasProperty("stackPrefix")) {
-            return "${project.stackPrefix}-${project.stackName}"
-        }
-        */
+        // Check if the task or the containing project have an alternate stack prefix configured
+        def stackPrefix = lookupAwsProperty(
+            { it.aws?.cloudformation?.stackPrefix },
+            ConfigScope.TASK, ConfigScope.PROJECT)
 
-        // By default, generate a stack prefix from the project name tokens
-        def joiner = new StringJoiner("-")
-        def nameTokens = project.name.split("[.]")
-        for(def index = 0; index < nameTokens.size(); index++) {
-            joiner.add(nameTokens[index])
+        if(stackPrefix.isPresent()) {
+            return "${stackPrefix.get()}-${getTemplateName()}"
         }
 
-        return joiner
-            .add(stackName)
-            .toString()
+        // By default, generate a stack name from the project name and template name
+        return "${project.name}-${getTemplateName()}"
     }
 
     /**
@@ -216,8 +214,6 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
             createChangeSetRequestBuilder.tags(tags)
         }
 
-        return
-
         // Optionally, add parameter overrides
         // TODO: Use the same tag logic above to isolate parameter overrides
         withCloudformationParameters { Map<String, String> parameters ->
@@ -248,7 +244,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
         def changesetArn = changesetCreationResponse.id()
 
         // Wait for the changeset to be created
-        def failOnEmptyChangeset = lookupAwsProperty("failOnEmptyChangeset") ?: false
+        def failOnEmptyChangeset = lookupAwsProperty("failOnEmptyChangeset") ?: false // TODO Fix this
         try {
             new ChangesetStatusWaiter()
                 .withCloudFormationClient(cloudformationClient)
