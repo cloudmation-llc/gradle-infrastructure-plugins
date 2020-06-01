@@ -17,7 +17,7 @@
 package com.cloudmation.gradle.aws.config
 
 enum ConfigScope {
-    TASK,
+    SELF,
     PROJECT,
     PROJECT_TREE
 }

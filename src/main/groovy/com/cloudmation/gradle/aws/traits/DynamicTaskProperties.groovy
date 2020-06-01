@@ -14,12 +14,20 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws
+package com.cloudmation.gradle.aws.traits
 
-class MissingAwsPropertyException extends RuntimeException {
+trait DynamicTaskProperties {
 
-    MissingAwsPropertyException(String propertyName) {
-        super("AWS configuration '${propertyName}' must be set at the root project, subproject, or task")
+    private Map<String, Object> propertyOverrides = new HashMap<>()
+
+    def propertyMissing(String key, value) {
+        if(value != null) {
+            propertyOverrides.put(key, value)
+        }
+    }
+
+    def propertyMissing(String key) {
+        return propertyOverrides.get(key)
     }
 
 }

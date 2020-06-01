@@ -17,14 +17,11 @@
 package com.cloudmation.gradle.aws.traits
 
 import com.cloudmation.gradle.aws.config.ConfigScope
-import groovy.transform.SelfType
 import org.gradle.api.Project
-import org.gradle.api.Task
 
 /**
  * Groovy trait that adds AWS configuration lookup superpowers to a task.
  */
-@SelfType(Task)
 trait AwsConfigurable {
 
     /**
@@ -36,12 +33,12 @@ trait AwsConfigurable {
      */
     Optional lookupAwsProperty(
         Closure propertyAccessor,
-        ConfigScope... scopes = [ConfigScope.TASK, ConfigScope.PROJECT, ConfigScope.PROJECT_TREE]) {
+        ConfigScope... scopes = [ConfigScope.SELF, ConfigScope.PROJECT, ConfigScope.PROJECT_TREE]) {
 
         // Iterate requested scopes
         def result = scopes.findResult { scope ->
-            if(scope == ConfigScope.TASK) {
-                // Try property lookup on the task
+            if(scope == ConfigScope.SELF) {
+                // Try property lookup on self
                 def propertyValue = propertyAccessor(this)
                 if(propertyValue != null) {
                     return Optional.of(propertyValue)
@@ -54,7 +51,7 @@ trait AwsConfigurable {
                     return Optional.of(propertyValue)
                 }
             }
-            else if(scope == ConfigScope.PROJECT_TREE && project.parent) {
+            else if(scope == ConfigScope.PROJECT_TREE && project?.parent) {
                 // Try recursive lookup on project hierarchy
                 return lookupAwsPropertyInProjectTree(project.parent, propertyAccessor)
             }
@@ -94,7 +91,7 @@ trait AwsConfigurable {
      * @return A List of the found objects.
      */
     List lookupAwsPropertySources() {
-        // Create a target list starting with this task
+        // Create a target list starting with this object
         List<Object> targets = [this]
 
         // Walk the project tree

@@ -16,13 +16,12 @@
 
 package com.cloudmation.gradle.aws.cloudformation
 
-
 import com.cloudmation.gradle.aws.config.ConfigScope
+import com.cloudmation.gradle.aws.config.MapConfigurationExtension
 import com.cloudmation.gradle.aws.traits.AwsConfigurable
-import com.cloudmation.gradle.aws.traits.ParameterOverridesContainer
+import com.cloudmation.gradle.aws.traits.DynamicTaskProperties
 import com.cloudmation.gradle.util.AnsiColors
 import org.gradle.api.DefaultTask
-import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
@@ -44,9 +43,19 @@ import java.util.concurrent.ExecutionException
  * Useful features such as stack tagging are easily configurable and allow for the creation of sensible organization
  * defaults to organize stacks and the resources managed by them.
  */
-class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, ParameterOverridesContainer {
+class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, DynamicTaskProperties {
+
+    private Map<String, Object> propertyOverrides = new HashMap<>()
 
     protected CloudFormationClient cloudformationClient
+
+    CloudformationDeployTask() {
+        // Create AWS configuration extension
+        def awsConfig = extensions.create("aws", MapConfigurationExtension.class)
+
+        // Create cloudformation namespace
+        awsConfig.createScope("cloudformation")
+    }
 
     @Internal
     boolean doNotExecute = false
@@ -54,7 +63,6 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
     @Internal
     boolean doNotCreate = false
 
-    @Input String stackName
     @InputFile File templateFile
 
     @Option(option = "do-not-execute", description = "Creates the stack but does not execute the changeset (see --no-execute-changeset for AWS CLI)")
@@ -68,8 +76,40 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
     }
 
     @Internal
+    @Override
+    String getDescription() {
+        return propertyOverrides.get("description") ?: "Deploy stack ${generatedStackName} from template ${templateFile.name}"
+    }
+
+    @Override
+    void setDescription(String description) {
+        propertyOverrides.put("description", description)
+    }
+
+    @Internal
+    @Override
+    String getGroup() {
+        return propertyOverrides.get("group")
+    }
+
+    @Override
+    void setGroup(String group) {
+        propertyOverrides.put("group", group)
+    }
+
+    @Internal
     String getTemplateName() {
         return templateFile.name.split("[.]")[0]
+    }
+
+    /**
+     * Expose the AWS configuration extension as a property. Since we create the extension above in the constructor,
+     * the Gradle automagic to register the extension as a property does not happen unless we do it manually.
+     * @return The extension object
+     */
+    @Internal
+    MapConfigurationExtension getAws() {
+        return extensions.getByName("aws") as MapConfigurationExtension
     }
 
     @Internal
@@ -77,7 +117,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
         // Check if the task defines a specific stack name
         def taskStackName = lookupAwsProperty(
             { it.aws?.cloudformation?.stackName },
-            ConfigScope.TASK)
+            ConfigScope.SELF)
 
         if(taskStackName.isPresent()) {
             return taskStackName.get()
@@ -86,7 +126,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
         // Check if the task or the containing project have an alternate stack prefix configured
         def stackPrefix = lookupAwsProperty(
             { it.aws?.cloudformation?.stackPrefix },
-            ConfigScope.TASK, ConfigScope.PROJECT)
+            ConfigScope.SELF, ConfigScope.PROJECT)
 
         if(stackPrefix.isPresent()) {
             return "${stackPrefix.get()}-${getTemplateName()}"
@@ -195,6 +235,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, P
             .collect { key, value -> Parameter.builder().parameterKey(key).parameterValue(value).build() }
 
         if(parameterOverrides.size() > 0) {
+            logger.lifecycle("Applying parameter overrides ${parameterOverrides} to deployment")
             createChangeSetRequestBuilder.parameters(parameterOverrides)
         }
 

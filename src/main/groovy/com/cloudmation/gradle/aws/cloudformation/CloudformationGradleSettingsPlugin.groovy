@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws
+package com.cloudmation.gradle.aws.cloudformation
 
 import groovy.io.FileType
 import org.gradle.api.Plugin
@@ -24,7 +24,7 @@ import org.gradle.api.initialization.Settings
  * Gradle settings plugin that scans directories beneath the /templates, and automatically creates CloudFormation
  * subprojects to manage templates and stack deployments.
  */
-class AwsProjectSettingsPlugin implements Plugin<Settings> {
+class CloudformationGradleSettingsPlugin implements Plugin<Settings> {
 
     @Override
     void apply(Settings settings) {
