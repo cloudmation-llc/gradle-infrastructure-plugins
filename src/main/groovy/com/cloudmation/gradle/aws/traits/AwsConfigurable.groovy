@@ -36,7 +36,7 @@ trait AwsConfigurable {
      */
     Optional lookupAwsProperty(
         Closure propertyAccessor,
-        ConfigScope... scopes = [ConfigScope.TASK, ConfigScope.PROJECT_TREE]) {
+        ConfigScope... scopes = [ConfigScope.TASK, ConfigScope.PROJECT, ConfigScope.PROJECT_TREE]) {
 
         // Iterate requested scopes
         def result = scopes.findResult { scope ->
@@ -47,9 +47,16 @@ trait AwsConfigurable {
                     return Optional.of(propertyValue)
                 }
             }
-            else if(scope == ConfigScope.PROJECT_TREE) {
+            else if(scope == ConfigScope.PROJECT) {
+                // Try property lookup on the project
+                def propertyValue = propertyAccessor(project)
+                if(propertyValue != null) {
+                    return Optional.of(propertyValue)
+                }
+            }
+            else if(scope == ConfigScope.PROJECT_TREE && project.parent) {
                 // Try recursive lookup on project hierarchy
-                return lookupAwsPropertyInProjectTree(project, propertyAccessor)
+                return lookupAwsPropertyInProjectTree(project.parent, propertyAccessor)
             }
 
             return null
@@ -61,7 +68,7 @@ trait AwsConfigurable {
 
     /**
      * Recursive helper method to walk the project tree and execute the provided property accessor closure
-     * to find an non-null value. Recursive walk terminates either when a value is found, or when there
+     * to find the first non-null value. Recursive walk terminates either when a value is found, or when there
      * are no more projects that can be traversed.
      * @param project Gradle project to run the property accessor against
      * @param propertyAccessor Closure with logic to find a property value
