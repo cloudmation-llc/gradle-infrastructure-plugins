@@ -198,4 +198,6 @@ aws {
 
 Running `gradle tasks` will display the tasks that are generated as a result.
 
-![Example of custom stacks](/img/screenshots/aws-cf-config-custom-tasks.png)
+<img
+    alt="Screenshot of Custom Stacks"
+    src={useBaseUrl('/img/screenshots/aws-cf-config-custom-tasks.png')} />

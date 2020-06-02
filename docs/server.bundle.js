@@ -16167,7 +16167,7 @@ const frontMatter={id:'cf-config',title:'CloudFormation Configuration',sidebar_l
         }
     }
 }
-`)),Object(_mdx_js_react__WEBPACK_IMPORTED_MODULE_2__[/* mdx */ "b"])("p",null,`Running `,Object(_mdx_js_react__WEBPACK_IMPORTED_MODULE_2__[/* mdx */ "b"])("inlineCode",{parentName:"p"},`gradle tasks`),` will display the tasks that are generated as a result.`),Object(_mdx_js_react__WEBPACK_IMPORTED_MODULE_2__[/* mdx */ "b"])("p",null,Object(_mdx_js_react__WEBPACK_IMPORTED_MODULE_2__[/* mdx */ "b"])("img",Object(_Users_mattrapczynski_Development_Projects_gradle_infrastructure_plugins_docusaurus_node_modules_babel_runtime_helpers_esm_extends__WEBPACK_IMPORTED_MODULE_0__[/* default */ "a"])({parentName:"p"},{"src":"/img/screenshots/aws-cf-config-custom-tasks.png","alt":"Example of custom stacks"}))));};MDXContent.isMDXComponent=true;
+`)),Object(_mdx_js_react__WEBPACK_IMPORTED_MODULE_2__[/* mdx */ "b"])("p",null,`Running `,Object(_mdx_js_react__WEBPACK_IMPORTED_MODULE_2__[/* mdx */ "b"])("inlineCode",{parentName:"p"},`gradle tasks`),` will display the tasks that are generated as a result.`),Object(_mdx_js_react__WEBPACK_IMPORTED_MODULE_2__[/* mdx */ "b"])("img",{alt:"Screenshot of Custom Stacks",src:Object(_docusaurus_useBaseUrl__WEBPACK_IMPORTED_MODULE_3__[/* default */ "a"])('/img/screenshots/aws-cf-config-custom-tasks.png')}));};MDXContent.isMDXComponent=true;
 
 /***/ }),
 /* 119 */
