@@ -223,6 +223,10 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
             logger.lifecycle("Applying resource tags ${tags} to deployment")
             createChangeSetRequestBuilder.tags(tags)
         }
+        else {
+            // Apply an empty collection to remove existing tags
+            createChangeSetRequestBuilder.tags(new ArrayList<Tag>())
+        }
 
         // Optionally, add parameter overrides
         def parameterOverrides = lookupAwsPropertySources()
