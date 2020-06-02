@@ -1,7 +1,7 @@
 module.exports = {
   title: 'Infrastructure Gradle Plugins by Cloudmation',
   url: 'https://your-docusaurus-test-site.com',
-  baseUrl: '/',
+  baseUrl: '/gradle-infrastructure-plugins/',
   favicon: 'img/favicon.ico',
   organizationName: 'cloudmation-llc',
   projectName: 'gradle-infrastructure-plugins',

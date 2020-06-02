@@ -5,9 +5,13 @@ task('docusaurus', type: Exec) {
     commandLine "npm"
     args "run", "build"
 
-    doLast {
+    doFirst {
+        project.delete("docs")
         project.file("docs").mkdirs()
         project.file("docs/.nojekyll").createNewFile()
+    }
+
+    doLast {        
         copy {
             from "docusaurus/build"
             into "docs"
