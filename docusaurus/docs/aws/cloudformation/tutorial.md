@@ -8,7 +8,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 So, you followed the steps in [Getting Started](cf-getting-started), and an empty project is ready to go. Now what?
 
-The CloudFormation plugin works by looking for specific directories, iterating through the files within, and generating runnable tasks according to what it finds. To demonstrate how this works, we will create a small VPC composed of resources to enable three availability zones with both public and private networking in the `us-west-2` region.
+The CloudFormation plugin works by looking for specific directories, iterating through the files within, and generating runnable tasks according to what it finds. To demonstrate how this works, we will create a small VPC composed of resources to enable three availability zones with public networking in the `us-west-2` region.
 
 As you proceed through the steps, at times you will see a reference to the *project root*. This refers to the directory that contains your entire project, or for absence of doubt where `settings.gradle` lives.
 
@@ -43,7 +43,7 @@ Within the `network` directory, created a template file named `vpc.yml`.
 YAML is highly recommended over JSON for designing CloudFormation templates. [The wins are too numerous to list here](https://aws.amazon.com/blogs/mt/the-virtues-of-yaml-cloudformation-and-using-cloudformation-designer-to-convert-json-to-yaml).
 :::
 
-Template samples are provided below for the benefit of the tutorial, but certainly feel free to substitute your own templates.
+Template samples are provided below for the benefit of the tutorial, but certainly feel free to substitute your own templates. Check the `examples/simple` directory for the actual template files used.
 
 ```yaml title="Sample vpc.yml"
 Description: VPC master configuration
@@ -66,7 +66,7 @@ Resources:
   DhcpOptions:
     Type: AWS::EC2::DHCPOptions
     Properties:
-      DomainName: us-west-2.compute.internal
+      DomainName: !Sub "${AWS::Region}.compute.internal"
       DomainNameServers:
         - AmazonProvidedDNS
 
@@ -158,11 +158,6 @@ Create a file named `vpc-zone-a.yml` in the same directory as `vpc.yml`, and cop
 Description: VPC availability zone A
 
 Parameters:
-  PrivateRange:
-    Type: String
-    AllowedPattern: "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}\\/\\d+"
-    Default: 10.255.1.0/24
-  
   PublicRange:
     Type: String
     AllowedPattern: "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}\\/\\d+"
@@ -173,21 +168,6 @@ Parameters:
     Default: 0
 
 Resources:
-
-  #
-  # Private subnet
-  #
-  SubnetPrivate:
-    Type: AWS::EC2::Subnet
-    Properties:
-      AvailabilityZone: !Select 
-        - !Ref RegionAzIndex
-        - Fn::GetAZs: !Ref "AWS::Region"
-      CidrBlock: !Ref PrivateRange
-      Tags:
-        - Key: Type
-          Value: private
-      VpcId: !ImportValue VpcId
 
   #
   # Public subnet
@@ -236,11 +216,11 @@ Copy `vpc-zone-a.yml` to new files `vpc-zone-b.yml` and `vpc-zone-c.yml`. Open e
 
 **Suggested Parameter Values:**
 
-| File | PrivateRange | PublicRange | RegionAzIndex
-| ---- | ---- | ---- | ---- |
-| vpc-zone-a.yml | `10.255.1.0/24` | `10.255.251.0/24` | `0` |
-| vpc-zone-b.yml | `10.255.2.0/24` | `10.255.252.0/24` | `1` |
-| vpc-zone-c.yml | `10.255.3.0/24` | `10.255.253.0/24` | `2` |
+| File | PublicRange | RegionAzIndex
+| ---- | ---- | ---- |
+| vpc-zone-a.yml | `10.255.251.0/24` | `0` |
+| vpc-zone-b.yml | `10.255.252.0/24` | `1` |
+| vpc-zone-c.yml | `10.255.253.0/24` | `2` |
 
 Once the templates have been adjusted, you can run multiple tasks in series and deploy resources for several stacks in one shot. Deploy zone B and zone C together by running `gradle deployVpcZoneB deployVpcZoneC`.
 
