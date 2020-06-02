@@ -6,7 +6,7 @@ sidebar_label: Tutorial
 
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
-So, you followed the steps in [Getting Started](aws-getting-started), and an empty project is ready to go. Now what?
+So, you followed the steps in [Getting Started](cf-getting-started), and an empty project is ready to go. Now what?
 
 The CloudFormation plugin works by looking for specific directories, iterating through the files within, and generating runnable tasks according to what it finds. To demonstrate how this works, we will create a small VPC composed of resources to enable three availability zones with both public and private networking in the `us-west-2` region.
 
@@ -45,7 +45,7 @@ Within the `network` directory, created a template file named `vpc.yml`.
 YAML is highly recommended over JSON for designing CloudFormation templates. [The wins are too numerous to list here](https://aws.amazon.com/blogs/mt/the-virtues-of-yaml-cloudformation-and-using-cloudformation-designer-to-convert-json-to-yaml).
 :::
 
-To help this tutorial flow, if you do not have your own templates to work with, you can copy and paste the template content from the samples provided.
+Template samples are provided below for the benefit of the tutorial, but certainly feel free to substitute your own templates.
 
 ```yaml title="Sample vpc.yml"
 Description: VPC master configuration

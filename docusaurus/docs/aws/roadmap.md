@@ -7,7 +7,7 @@ sidebar_label: Roadmap
 Ideas for new directions and functionality to add to the plugins.
 
 * Support for MFA
-* Some of the applied conventions are hard set. Make these more configurable over time.
+* Tag and parameter values from closures
 * Investigate proper support for using stack sets through the SDK
 * Development of custom CloudFormation resources using Lambda functions
 * General support for Lambda projects

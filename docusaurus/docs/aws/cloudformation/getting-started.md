@@ -24,7 +24,7 @@ CloudFormation is an excellent service offering from AWS that provides ingredien
 
 ## Installation
 
-Regardless of which option you choose below, the steps below will cover getting a blank project created and set up. The [tutorial](aws-tutorial) walks through a basic AWS configuration in greater detail including working with templates, and the auto-generated tasks.
+Regardless of which option you choose below, the steps below will cover getting a blank project created and set up. The [tutorial](cf-tutorial) walks through a basic AWS configuration in greater detail including working with templates, and the auto-generated tasks.
 
 ### Starter Template
 
@@ -79,4 +79,4 @@ plugins {
 
 7. _Optionally_, create a Gradle wrapper by running `gradle wrapper`. This is highly recommended especially if you plan to develop a CI/CD pipeline for pushing infrastructure changes, or when multiple individuals will be working from this repo.
 
-8. If this is your first time using the plugins, check out the [tutorial](aws-tutorial) next.
+8. If this is your first time using the plugins, check out the [tutorial](cf-tutorial) next.
