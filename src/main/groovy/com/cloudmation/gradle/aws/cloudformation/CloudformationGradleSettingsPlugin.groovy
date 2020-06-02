@@ -29,14 +29,14 @@ class CloudformationGradleSettingsPlugin implements Plugin<Settings> {
     @Override
     void apply(Settings settings) {
         def rootProjectPath = settings.rootDir.toPath()
-        def cloudformationDir = new File(settings.rootDir, "cloudformation")
+        def cloudformationDir = new File(settings.rootDir, "src/cloudformation")
 
-        // Check if the 'cloudformation' directory exists, or stop if not found
+        // Check if the 'src/cloudformation' directory exists, or stop if not found
         if(!(cloudformationDir.exists())) {
-            return
+            // Create src/cloudformation
+            cloudformationDir.mkdirs()
         }
 
-        // Deeply iterate through all directories beneath $ROOT/cloudformation
         cloudformationDir.eachFileRecurse(FileType.DIRECTORIES) { projectDir ->
             // Skip . directories
             if(projectDir.name[0] == ".") return
@@ -50,6 +50,7 @@ class CloudformationGradleSettingsPlugin implements Plugin<Settings> {
             def projectName = projectDir.name
             def generatedProjectName = projectRelativePath
                 .toString()
+                .replaceAll("src/", "")
                 .replaceAll("[/]", ":")
             def gradleProjectName = ":${generatedProjectName}"
             def gradleFilename = "${projectName}.gradle"
