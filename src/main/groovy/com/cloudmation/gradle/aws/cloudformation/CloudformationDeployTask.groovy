@@ -217,7 +217,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
                 result.putAll(tags)
                 result
             }
-            .collect { key, value -> Tag.builder().key(key).value(value).build() }
+            .collect { key, value -> Tag.builder().key(key).value("${value}").build() }
 
         if(tags.size() > 0) {
             logger.lifecycle("Applying resource tags ${tags} to deployment")
@@ -232,7 +232,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
                 result.putAll(parameters)
                 result
             }
-            .collect { key, value -> Parameter.builder().parameterKey(key).parameterValue(value).build() }
+            .collect { key, value -> Parameter.builder().parameterKey(key).parameterValue("${value}").build() }
 
         if(parameterOverrides.size() > 0) {
             logger.lifecycle("Applying parameter overrides ${parameterOverrides} to deployment")
