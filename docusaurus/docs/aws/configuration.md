@@ -49,3 +49,5 @@ Most properties are overriden at the deepest point where they are assigned. Tags
 You might look at it this way: root tags + subproject(s) tags + task tags = tags applied to the resource.
 
 Overwrites will only happen if a tag deeper in the hierarchy has the same key name as a tag found earlier. For example, if you define a tag named `department` in a subproject, but the task also defines a `department` tag, the value assigned to the task will win.
+
+If no tags are found, then any existing custom tags are removed from the resources on the next deployment.
