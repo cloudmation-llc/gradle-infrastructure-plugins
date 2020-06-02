@@ -37,6 +37,19 @@ class CloudformationGradleSettingsPlugin implements Plugin<Settings> {
             cloudformationDir.mkdirs()
         }
 
+        // Configure :cloudformation top-level project
+        def topLevelGradleFilename = "cloudformation.gradle"
+        settings.include ":cloudformation"
+        settings.project(":cloudformation").projectDir = cloudformationDir
+        settings.project(":cloudformation").buildFileName = topLevelGradleFilename
+
+        // Check (and create) a Gradle build file for the top level project
+        def topLevelGradleFile = new File(cloudformationDir, topLevelGradleFilename)
+        if(!(topLevelGradleFile.exists())) {
+            topLevelGradleFile.createNewFile()
+        }
+
+        // Traverse subdirectories beneath src/cloudformation
         cloudformationDir.eachFileRecurse(FileType.DIRECTORIES) { projectDir ->
             // Skip . directories
             if(projectDir.name[0] == ".") return

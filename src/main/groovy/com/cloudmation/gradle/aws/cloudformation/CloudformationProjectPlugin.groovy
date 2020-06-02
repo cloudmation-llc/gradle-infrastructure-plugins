@@ -49,11 +49,8 @@ class CloudformationProjectPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.subprojects { Project subproject ->
-            // Skip ":cloudformation" subproject
-            if(subproject.name == "cloudformation") {
-                return
-            }
-            else if(!(subproject.path.startsWith(":cloudformation"))) {
+            // Skip projects not related to CloudFormation
+            if(!(subproject.path.startsWith(":cloudformation"))) {
                 return
             }
 
