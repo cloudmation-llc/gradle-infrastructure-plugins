@@ -110,3 +110,5 @@ pluginBundle {
     vcsUrl = "https://github.com/cloudmation-llc/gradle-infrastructure-plugins"
     tags = ["aws", "cloudformation", "cloud"]
 }
+
+apply from: "docusaurus.gradle"

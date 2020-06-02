@@ -31,13 +31,9 @@ module.exports = {
           title: 'Docs',
           items: [
             {
-              label: 'Style Guide',
-              to: 'doc1',
-            },
-            {
-              label: 'Second Doc',
-              to: 'doc2',
-            },
+              label: 'About',
+              to: 'about',
+            }
           ],
         },
         {
