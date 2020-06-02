@@ -1,0 +1,49 @@
+Description: VPC availability zone A
+
+Parameters:
+  PublicRange:
+    Type: String
+    AllowedPattern: "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}\\/\\d+"
+    Default: 10.255.251.0/24
+
+  RegionAzIndex:
+    Type: Number
+    Default: 0
+
+Resources:
+
+  #
+  # Public subnet
+  #
+  SubnetPublic:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select
+        - !Ref RegionAzIndex
+        - Fn::GetAZs: !Ref "AWS::Region"
+      CidrBlock: !Ref PublicRange
+      Tags:
+        - Key: Type
+          Value: public
+      VpcId: !ImportValue VpcId
+
+  #
+  # Route table for public subnet
+  #
+  RouteTablePublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !ImportValue VpcId
+
+  RouteTablePublicSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SubnetPublic
+      RouteTableId: !Ref RouteTablePublic
+
+  RoutePublicRouteInternetGateway:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !ImportValue VpcInternetGateway
