@@ -35,7 +35,7 @@ A helper script is provided that will clone the template repo, and then replace 
 Copy and paste the line below to download and run the `create-aws-project.sh` script straight from GitHub. Replace `YOUR_DIRECTORY` with a destination name of your choosing.
 
 ```bash
- curl -L "https://raw.githubusercontent.com/cloudmation-llc/gradle-infrastructure-plugins/master/create-aws-project.sh" | bash -s YOUR_DIRECTORY
+curl -L "https://raw.githubusercontent.com/cloudmation-llc/gradle-aws-starter/master/create-project.sh" | bash -s YOUR_DIRECTORY
 ```
 
 ### Manual Installation
