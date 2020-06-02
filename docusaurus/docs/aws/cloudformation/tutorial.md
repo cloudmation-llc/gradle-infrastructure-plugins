@@ -12,11 +12,9 @@ The CloudFormation plugin works by looking for specific directories, iterating t
 
 As you proceed through the steps, at times you will see a reference to the *project root*. This refers to the directory that contains your entire project, or for absence of doubt where `settings.gradle` lives.
 
-### Step 1 - Create Coudformation Directory
+When the plugin is applied to the root project, it looks for `src/cloudformation`. If it does not exist, then the plugin will create it for you. This will serve as the root folder for all templates. You can have as many subdirectories as you want to organize your templates. Each subdirectory found is configured as a Gradle subproject.
 
-Create a `cloudformation` directory. This will serve as the root folder for all templates. You can have as many subdirectories as you want to organize your templates. Each subdirectory where at least one template is found is made into a Gradle subproject.
-
-### Step 2 - Configure Global Defaults
+### Step 1 - Configure Global Defaults
 
 In the project root, open `build.gradle`. You will just see 3 lines which import the project plugin.
 
@@ -33,11 +31,11 @@ aws {
 }
 ```
 
-### Step 3 - Create Network Directory
+### Step 2 - Create Network Directory
 
 Within the `cloudformation` directory, create another directory named `network`.
 
-### Step 4 - Create vpc.yml Template
+### Step 3 - Create vpc.yml Template
 
 Within the `network` directory, created a template file named `vpc.yml`.
 
@@ -122,7 +120,7 @@ Outputs:
       Name: VpcInternetGateway
 ```
 
-### Step 5 - First Gradle Review
+### Step 4 - First Gradle Review
 
 :::note "Gradle" vs "Gradlew"
 If you are using the Gradle wrapper such as via the starter template, then all Gradle commands can be run by using the `./gradlew` or `.\gradlew.bat` scripts.
@@ -146,11 +144,11 @@ Now, let's look at the tasks. Run `gradle tasks`.
 
 The plugin automatically creates a `lintVpc` task using the filename to run the `cfn-lint` tool to check for template errors and overall correctness. A `deployVpc` task is also created which will do the actual work of creating the CloudFormation stack and changeset. The deploy task has the linting task set as a dependency so that every deploy will first lint the template to check for errors.
 
-### Step 6 - Create the VPC
+### Step 5 - Create the VPC
 
 Run the `deployVpc` task, and watch the VPC stack with its resources get created. After the build completes successfully, you will be able to browse around the AWS console and see the everything that was created.
 
-### Step 7 - Add First Availability Zone
+### Step 6 - Add First Availability Zone
 
 For simplicity, we will create the network resources for each availability zone in separate template files. There other more advanced methods to take advantage of template reuse and parameters discussed later in the documentation.
 
@@ -232,7 +230,7 @@ Run `gradle tasks` again, and you will see new tasks created to lint and deploy 
 
 Now run `gradle deployVpcZoneA` to create the resources.
 
-### Step 8 - Create Additional Availability Zones
+### Step 7 - Create Additional Availability Zones
 
 Copy `vpc-zone-a.yml` to new files `vpc-zone-b.yml` and `vpc-zone-c.yml`. Open each of the new zone files, and adjust the default values for the parameters accordingly so that the IP ranges are unique, and the correct availability zone identifier is set.
 
