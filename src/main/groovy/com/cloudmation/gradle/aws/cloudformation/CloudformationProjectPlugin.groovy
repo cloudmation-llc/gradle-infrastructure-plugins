@@ -70,12 +70,12 @@ class CloudformationProjectPlugin implements Plugin<Project> {
             // Wait until subproject is completely evaluated
             subproject.afterEvaluate {
                 // Check for a custom task group
-                def taskGroup = projectTaskGenConfig.group
+                def taskGroup = projectTaskGenConfig.group ?: DEFAULT_TASK_GROUP
 
                 // Add a custom method for registering group tasks
                 subproject.ext.deployAsGroup = { String taskName, String... tasksToRun ->
                     subproject.tasks.register(taskName, GradleBuild) {
-                        group taskGroup ?: DEFAULT_TASK_GROUP
+                        group taskGroup
                         tasks = tasksToRun as Collection<String>
                     }
                 }
@@ -96,7 +96,7 @@ class CloudformationProjectPlugin implements Plugin<Project> {
 
                     if(lintTaskIncluded) {
                         subproject.tasks.register(lintTaskName, Exec) {
-                            group taskGroup ?: DEFAULT_TASK_GROUP
+                            group taskGroup
                             description "Run cfn-lint to validate ${relativePath}/${template.name}"
                             commandLine "cfn-lint"
                             args "-t", template.toString()
@@ -110,9 +110,9 @@ class CloudformationProjectPlugin implements Plugin<Project> {
                     if(deployTaskIncluded) {
                         subproject.tasks.register (deployTaskName, CloudformationDeployTask) {
                             if(lintTaskIncluded) {
-                                dependsOn "lint${finalBaseName}"
+                                dependsOn lintTaskName
                             }
-                            group taskGroup ?: DEFAULT_TASK_GROUP
+                            group taskGroup
                             templateFile = template
                         }
                     }

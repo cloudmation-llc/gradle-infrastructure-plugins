@@ -45,8 +45,6 @@ import java.util.concurrent.ExecutionException
  */
 class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, DynamicTaskProperties {
 
-    private Map<String, Object> propertyOverrides = new HashMap<>()
-
     protected CloudFormationClient cloudformationClient
 
     CloudformationDeployTask() {
@@ -93,8 +91,8 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
     }
 
     @Override
-    void setGroup(String group) {
-        propertyOverrides.put("group", group)
+    void setGroup(String newGroupName) {
+        propertyOverrides.put("group", newGroupName)
     }
 
     @Internal

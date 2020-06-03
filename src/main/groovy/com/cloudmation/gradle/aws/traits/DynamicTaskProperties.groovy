@@ -18,7 +18,7 @@ package com.cloudmation.gradle.aws.traits
 
 trait DynamicTaskProperties {
 
-    private Map<String, Object> propertyOverrides = new HashMap<>()
+    Map<String, Object> propertyOverrides = new HashMap<>()
 
     def propertyMissing(String key, value) {
         if(value != null) {
