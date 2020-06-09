@@ -18,6 +18,11 @@ package com.cloudmation.gradle.aws.traits
 
 import com.cloudmation.gradle.aws.config.ConfigScope
 import org.gradle.api.Project
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.sts.StsClient
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest
 
 /**
  * Groovy trait that adds AWS configuration lookup superpowers to a task.
@@ -112,6 +117,72 @@ trait AwsConfigurable {
         // Can we go higher in the project tree?
         if(start.parent) {
             walkProjectTree(start.parent, handler)
+        }
+    }
+
+    def withCredentialsProvider(Closure handler) {
+        // Lookup a configured region
+        def region = lookupAwsProperty { it.aws?.region }
+
+        // Lookup if a credential profile is configured
+        def profileLookup = lookupAwsProperty { it.aws?.profile }
+        def profileProvider = profileLookup.map { String configuredProfile ->
+            ProfileCredentialsProvider
+                .builder()
+                .profileName(configuredProfile)
+                .build()
+        }
+
+        // Lookup if we should assume a specific role for credentials
+        def assumeRoleArn = lookupAwsProperty { it.aws?.assumeRole } . orElse(null)
+        if(assumeRoleArn) {
+            // Lookup if MFA is expected as part of the role assumption
+            def requestsMfa = lookupAwsProperty { it.aws?.mfa }
+
+            // Create a new STS client builder
+            def stsClientBuilder = StsClient.builder()
+
+            // Apply region if configured
+            region.ifPresent { String configuredRegion ->
+                stsClientBuilder.region(Region.of(configuredRegion))
+            }
+
+            // Apply the credentials profile if configured
+            profileProvider.ifPresent { AwsCredentialsProvider provider ->
+                stsClientBuilder.credentialsProvider(provider)
+            }
+
+            // Build the STS client
+            def stsClient = stsClientBuilder.build()
+
+            // Construct the assume role request
+            def assumeRoleRequestBuilder = AssumeRoleRequest.builder()
+
+            // Add the role ARN to assume
+            assumeRoleRequestBuilder.roleArn(assumeRoleArn)
+
+            // If MFA is expected, prompt for the token now
+            // (reference: https://mrhaki.blogspot.com/2010/09/gradle-goodness-get-user-input-values.html)
+            if (requestsMfa.isPresent()) {
+                if (requestsMfa.get()) {
+                    def console = System.console()
+                    if (console) {
+                        def token = console.readLine('> Please enter the 6-digit MFA token: ')
+                        assumeRoleRequestBuilder.tokenCode(token)
+                    } else {
+                        throw new RuntimeException("MFA is requested, but could not get a console instance to read input")
+                    }
+                }
+            }
+
+            // Finish building the assume role request
+            def assumeRoleRequest = assumeRoleRequestBuilder.build() as AssumeRoleRequest
+
+            // Send the role assumption request
+            def assumeRoleResponse = stsClient.assumeRole(assumeRoleRequest)
+
+            // Execute the provider handler with the session credentials
+            handler(assumeRoleResponse.credentials())
         }
     }
 

@@ -3,7 +3,7 @@
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * You may obtain a copy of t he License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,7 +16,7 @@
 
 package com.cloudmation.gradle.aws
 
-import com.cloudmation.gradle.aws.config.MapConfigurationExtension
+import com.cloudmation.gradle.aws.config.AwsConfigDslExtension
 import groovy.transform.CompileStatic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -31,7 +31,7 @@ class AwsProjectPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         // Create AWS configuration extension on root project
-        project.extensions.create("aws", MapConfigurationExtension.class)
+        project.extensions.create("aws", AwsConfigDslExtension.class)
     }
 
 }
