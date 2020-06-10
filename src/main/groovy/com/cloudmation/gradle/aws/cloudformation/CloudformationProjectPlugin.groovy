@@ -18,10 +18,11 @@ package com.cloudmation.gradle.aws.cloudformation
 
 import com.cloudmation.gradle.aws.config.AwsConfigDsl
 import com.cloudmation.gradle.aws.config.TaskGenerationDsl
+import com.cloudmation.gradle.util.Closures
+
 import org.apache.commons.text.CaseUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.GradleBuild
 
 import static groovy.io.FileType.FILES
@@ -54,19 +55,19 @@ class CloudformationProjectPlugin implements Plugin<Project> {
             }
 
             // Create AWS configuration extension on subproject
-            def projectAwsConfig = subproject.extensions.create("aws", AwsConfigDsl.class)
-            projectAwsConfig.delegateOwner = subproject
-
-            // Create a 'cloudformation' config block
-            def projectCfConfig = projectAwsConfig.createdNestedDsl("cloudformation", CloudformationConfigDsl.class)
+            def awsConfig = subproject.extensions.create("aws", AwsConfigDsl.class)
+            awsConfig.delegateOwner = subproject
 
             // Create typed task generation DSL
-            def projectTaskGenConfig = projectCfConfig.createdNestedDsl("taskGeneration", TaskGenerationDsl.class)
+            def taskGenConfig = awsConfig.createdNestedDsl("taskGeneration", TaskGenerationDsl.class)
+
+            // Create a 'cloudformation' config block
+            def cfConfig = awsConfig.createdNestedDsl("cloudformation", CloudformationConfigDsl.class)
 
             // Wait until subproject is completely evaluated
             subproject.afterEvaluate {
                 // Check for a custom task group
-                def taskGroup = projectTaskGenConfig.group ?: DEFAULT_TASK_GROUP
+                def taskGroup = taskGenConfig.group ?: DEFAULT_TASK_GROUP
 
                 // Add a custom method for registering group tasks
                 subproject.ext.deployAsGroup = { String taskName, String... tasksToRun ->
@@ -80,7 +81,7 @@ class CloudformationProjectPlugin implements Plugin<Project> {
                 subproject.projectDir.eachFileMatch(FILES, ~/.*\.(y[a]?ml|json)/, { File template ->
                     def (baseName, extension) = template.name.split("[.]")
                     def camelBaseName = camelCase(baseName)
-                    def camelTaskPrefix = camelCase(projectCfConfig.taskPrefix ?: "")
+                    def camelTaskPrefix = camelCase(cfConfig.taskPrefix ?: "")
                     def finalBaseName = "${camelTaskPrefix}${camelBaseName}"
                     def pathProject = project.projectDir.toPath()
                     def pathSubproject = subproject.projectDir.toPath()
@@ -88,67 +89,61 @@ class CloudformationProjectPlugin implements Plugin<Project> {
 
                     // Check if lint task should be included based on naming rules
                     def lintTaskName = "lint${finalBaseName}"
-                    def lintTaskIncluded  = projectTaskGenConfig.isTaskIncluded(lintTaskName)
+                    def lintTaskIncluded  = taskGenConfig.isTaskIncluded(lintTaskName)
 
                     if(lintTaskIncluded) {
-                        subproject.tasks.register(lintTaskName, Exec) {
-                            group taskGroup
-                            description "Run cfn-lint to validate ${relativePath}/${template.name}"
-                            commandLine "cfn-lint"
-                            args "-t", template.toString()
+                        subproject.tasks.register(lintTaskName, CloudformationLintTask) {
+                            templateFile = template
                         }
                     }
 
                     // Check if deploy task should be included based on naming rules
                     def deployTaskName = "deploy${finalBaseName}"
-                    def deployTaskIncluded = projectTaskGenConfig.isTaskIncluded(deployTaskName)
+                    def deployTaskIncluded = taskGenConfig.isTaskIncluded(deployTaskName)
 
                     if(deployTaskIncluded) {
-                        subproject.tasks.register (deployTaskName, CloudformationDeployTask) {
+                        subproject.tasks.register (deployTaskName, CloudformationDeployStackTask) {
                             if(lintTaskIncluded) {
                                 dependsOn lintTaskName
                             }
-                            group taskGroup
                             templateFile = template
                         }
                     }
                 })
 
                 // Iterate through custom stack definitions
-                def customStacks = projectCfConfig?.stacks
-                customStacks?.each { stackName, creationSpec ->
-                    def camelBaseName = camelCase(creationSpec.name)
-                    def camelTaskPrefix = camelCase(projectCfConfig.taskPrefix ?: "")
+                cfConfig.customStacks.each { String stackName, Closure configurer ->
+                    def camelBaseName = camelCase(stackName)
+                    def camelTaskPrefix = camelCase(cfConfig.taskPrefix ?: "")
                     def finalBaseName = "${camelTaskPrefix}${camelBaseName}"
 
-                    def specStackName = creationSpec?.stackName
-                    def specTemplateFile = creationSpec?.template
-                    def specIncludeLintTask = (creationSpec.lint != null) ? creationSpec.lint : true
+                    // Extract the properties from the configurer closure
+                    Closures.extractProperties(configurer, subproject)
 
-                    if(specIncludeLintTask) {
-                        subproject.tasks.register("lint${finalBaseName}", Exec) {
-                            description "Run cfn-lint to validate ${specTemplateFile.name} for custom stack ${specStackName}"
-                            group creationSpec.group ?: taskGroup ?: DEFAULT_TASK_GROUP
-                            commandLine "cfn-lint"
-                            args "-t", specTemplateFile.toString()
+                    // Create lint task (if enabled)
+                    def lintTaskName = "lint${finalBaseName}"
+                    if(configurer.metaClass.lint ?: true) {
+                        subproject.tasks.register(lintTaskName, CloudformationLintTask) { task ->
+                            // Map the configurer closure onto the task
+                            def remappedClosure = configurer.rehydrate(task, subproject, null)
+                            remappedClosure.resolveStrategy = DELEGATE_FIRST
+                            remappedClosure()
                         }
                     }
 
-                    subproject.tasks.register ("deploy${finalBaseName}", CloudformationDeployTask) {
-                        if(specIncludeLintTask) {
-                            dependsOn "lint${finalBaseName}"
-                        }
-                        group creationSpec.group ?: taskGroup ?: DEFAULT_TASK_GROUP
-                        description "Deploy custom stack ${specStackName}"
-                        templateFile = specTemplateFile
-                        aws {
-                            cloudformation {
-                                // Optionally add parameter overrides
-                                parameterOverrides = creationSpec.parameterOverrides
+                    // Create the deploy task
+                    subproject.tasks.register(
+                        "deploy${finalBaseName}",
+                        CloudformationDeployStackTask) { task ->
 
-                                // Set custom stack name
-                                stackName = specStackName
-                            }
+                        // Map the configurer closure onto the task
+                        def remappedClosure = configurer.rehydrate(task, subproject, null)
+                        remappedClosure.resolveStrategy = DELEGATE_FIRST
+                        remappedClosure()
+
+                        // Add dependencies
+                        if(configurer.metaClass.lint ?: true) {
+                            dependsOn lintTaskName
                         }
                     }
                 }

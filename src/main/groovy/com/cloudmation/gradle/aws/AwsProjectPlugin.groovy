@@ -17,6 +17,7 @@
 package com.cloudmation.gradle.aws
 
 import com.cloudmation.gradle.aws.config.AwsConfigDsl
+import com.cloudmation.gradle.aws.config.TaskGenerationDsl
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -31,6 +32,9 @@ class AwsProjectPlugin implements Plugin<Project> {
         // Create AWS configuration extension on root project
         def awsConfig = project.extensions.create("aws", AwsConfigDsl.class)
         awsConfig.delegateOwner = project
+
+        // Create typed task generation DSL
+        awsConfig.createdNestedDsl("taskGeneration", TaskGenerationDsl.class)
     }
 
 }

@@ -16,9 +16,35 @@
 
 package com.cloudmation.gradle.aws.cloudformation
 
-import com.cloudmation.gradle.aws.config.AwsConfigDsl
+import com.cloudmation.gradle.config.ExpandoConfigDsl
 import groovy.transform.InheritConstructors
 
 @InheritConstructors
-class CloudformationConfigDsl extends AwsConfigDsl {
+class CloudformationConfigDsl extends ExpandoConfigDsl {
+
+    Map<String, Closure> customStacks = new HashMap<>()
+    Map<String, String> parameterOverrides = new HashMap()
+
+    def parameterOverrides(Map<String, String> params) {
+        if(params != null) {
+            parameterOverrides.putAll(params)
+        }
+    }
+
+    def parameterOverride(String key, String value) {
+        parameterOverrides.put(key, value)
+    }
+
+    @SuppressWarnings('GroovyAssignabilityCheck')
+    @Override
+    def methodMissing(String name, args) {
+        if(name == "stack" && args?.size() == 2) {
+            // Add to custom stacks collection
+            customStacks.put(args[0], args[1])
+        }
+        else {
+            super.methodMissing(name, args)
+        }
+    }
+
 }
