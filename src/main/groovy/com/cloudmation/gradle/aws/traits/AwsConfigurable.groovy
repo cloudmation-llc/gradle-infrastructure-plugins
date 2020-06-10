@@ -17,6 +17,7 @@
 package com.cloudmation.gradle.aws.traits
 
 import com.cloudmation.gradle.aws.config.ConfigScope
+import com.cloudmation.gradle.traits.PropertiesFileUtilities
 import org.gradle.api.Project
 import org.gradle.api.internal.tasks.userinput.UserInputHandler
 import org.threeten.extra.AmountFormats
@@ -26,6 +27,9 @@ import software.amazon.awssdk.services.sts.StsClient
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.function.Consumer
@@ -126,95 +130,109 @@ trait AwsConfigurable implements PropertiesFileUtilities {
         }
     }
 
+    /**
+     * Run through a series of checks to build a chain of one or more credentials providers. Supports named
+     * profiles, and if requested, session credentials obtained after a successful MFA challenge. If no profile
+     * is specified, then the default credentials provider is used.
+     * @return A AwsCredentialsProviderChain with one or more enrolled providers
+     */
     @SuppressWarnings('GroovyAssignabilityCheck')
     AwsCredentialsProviderChain resolveCredentialsProvider() {
         // Create an AWS credentials chain builder to combine multiple methods
         def credentialsChainBuilder = AwsCredentialsProviderChain.builder()
 
-        // Check for an MFA session file
-        def mfaCredentialsFile = project.rootProject.file(".aws-mfa-session-credentials")
-        def mfaCredentials = getPropertiesFile(mfaCredentialsFile)
-        if(mfaCredentials.containsKey("accessKeyId")
-            && mfaCredentials.containsKey("secretKeyId")
-            && mfaCredentials.containsKey("sessionToken")
-            && mfaCredentials.containsKey("expires")) {
+        // Check to see if a named profile is requested
+        def awsProfileName = lookupAwsProperty { it.aws?.profile }.orElse(null)
+        if(awsProfileName) {
+            def profileFile = ProfileFile.defaultProfileFile()
+            def profile = profileFile
+                .profile(awsProfileName)
+                .orElseThrow({ new RuntimeException("Could not resolved named AWS profile $awsProfileName") })
+                .properties()
 
-            // Check the expiration date
-            LocalDateTime expiration = LocalDateTime.parse(mfaCredentials.getProperty("expires"))
-            LocalDateTime now = LocalDateTime.now()
-            if(expiration.isAfter(now)) {
-                // Add a static credentials provider
-                AwsSessionCredentials sessionCredentials = AwsSessionCredentials
-                    .create(
-                        mfaCredentials.getProperty("accessKeyId"),
-                        mfaCredentials.getProperty("secretKeyId"),
-                        mfaCredentials.getProperty("sessionToken"))
+            // Check if session credentials for the named profile already exist
+            Path pathMfaCredentials = Paths.get(System.getProperty("java.io.tmpdir"), ".aws-mfa-session-${awsProfileName}")
+            String mfaCredentialsFilename = pathMfaCredentials.getName(pathMfaCredentials.nameCount - 1)
 
+            if (Files.exists(pathMfaCredentials)) {
+                def mfaCredentials = getPropertiesFile(pathMfaCredentials)
+                if (mfaCredentials.containsKey("accessKeyId")
+                    && mfaCredentials.containsKey("secretKeyId")
+                    && mfaCredentials.containsKey("sessionToken")
+                    && mfaCredentials.containsKey("expires")) {
+
+                    // Check the expiration date
+                    LocalDateTime expiration = LocalDateTime.parse(mfaCredentials.getProperty("expires"))
+                    LocalDateTime now = LocalDateTime.now()
+                    if (expiration.isAfter(now)) {
+                        // Add a static credentials provider
+                        AwsSessionCredentials sessionCredentials = AwsSessionCredentials
+                            .create(
+                                mfaCredentials.getProperty("accessKeyId"),
+                                mfaCredentials.getProperty("secretKeyId"),
+                                mfaCredentials.getProperty("sessionToken"))
+
+                        credentialsChainBuilder.addCredentialsProvider(
+                            StaticCredentialsProvider.create(sessionCredentials))
+
+                        if (logger) {
+                            // Calculate a helpful duration for when the expiration will happen
+                            def timeRemaining = Duration.between(now, expiration)
+                            def formattedDuration = AmountFormats.wordBased(timeRemaining, Locale.ENGLISH)
+
+                            logger.lifecycle("Using existing MFA session credentials from ${mfaCredentialsFilename} (expires in ${formattedDuration})")
+                        }
+
+                        // Short circuit the credentials resolution and return the chain
+                        // with the resolved session credentials
+                        return credentialsChainBuilder.build()
+                    }
+                }
+            }
+
+            // Check if a role should be assumed and MFA is expected
+            if(profile.role_arn && profile.mfa_serial) {
+                // Create an AWS STS assume role credentials provider
+                def stsAssumeRoleProvider = StsAssumeRoleCredentialsProvider
+                    .builder()
+                    .stsClient(StsClient.create())
+                    .refreshRequest(new StsRequestBuilder(profile, this))
+                    .build()
+
+                // Request session credentials
+                AwsSessionCredentials credentials = stsAssumeRoleProvider.resolveCredentials()
+
+                // Write session credentials to local properties file
+                withPropertiesFile(pathMfaCredentials, {
+                    // Set AWS credential properties
+                    setProperty("accessKeyId", credentials.accessKeyId())
+                    setProperty("secretKeyId", credentials.secretAccessKey())
+                    setProperty("sessionToken", credentials.sessionToken())
+
+                    // Add an expiration timestamp
+                    def expiresInSeconds = Long.parseLong(profile.getOrDefault("duration_seconds", "3600"))
+                    def expiresTimestamp = LocalDateTime
+                        .now()
+                        .plusSeconds(expiresInSeconds)
+
+                    setProperty("expires", expiresTimestamp.toString())
+                })
+
+                // Add static provider for new session credentials
                 credentialsChainBuilder.addCredentialsProvider(
-                    StaticCredentialsProvider.create(sessionCredentials))
+                    StaticCredentialsProvider.create(credentials))
 
                 if(logger) {
-                    // Calculate a helpful duration for when the expiration will happen
-                    def timeRemaining = Duration.between(now, expiration)
-                    def formattedDuration = AmountFormats.wordBased(timeRemaining, Locale.ENGLISH)
-
-                    logger.lifecycle("Using existing MFA credentials from .aws-mfa-session-credentials (expires in ${formattedDuration})")
+                    logger.lifecycle("Wrote new AWS MFA session credentials to ${mfaCredentialsFilename}")
                 }
             }
-        }
-        else {
-            // Lookup if a named profile should be used
-            lookupAwsProperty { it.aws?.profile }.ifPresent { profileName ->
-                def profileFile = ProfileFile.defaultProfileFile()
-                def profile = profileFile
-                    .profile(profileName)
-                    .orElseThrow({ new RuntimeException("Could not resolved named AWS profile $profileName")})
-                    .properties()
 
-                // Check if a role should be assumed and MFA is expected
-                if(profile.role_arn && profile.mfa_serial) {
-                    // Create an AWS STS assume role credentials provider
-                    def stsAssumeRoleProvider = StsAssumeRoleCredentialsProvider
-                        .builder()
-                        .stsClient(StsClient.create())
-                        .refreshRequest(new StsRequestBuilder(profile, this))
-                        .build()
-
-                    // Request session credentials
-                    AwsSessionCredentials credentials = stsAssumeRoleProvider.resolveCredentials()
-
-                    // Write session credentials to local properties file
-                    withPropertiesFile(mfaCredentialsFile, {
-                        // Set AWS credential properties
-                        setProperty("accessKeyId", credentials.accessKeyId())
-                        setProperty("secretKeyId", credentials.secretAccessKey())
-                        setProperty("sessionToken", credentials.sessionToken())
-
-                        // Add an expiration timestamp
-                        def expiresInSeconds = Long.parseLong(profile.getOrDefault("duration_seconds", "3600"))
-                        def expiresTimestamp = LocalDateTime
-                            .now()
-                            .plusSeconds(expiresInSeconds)
-
-                        setProperty("expires", expiresTimestamp.toString())
-                    })
-
-                    if(logger) {
-                        logger.lifecycle("Wrote new AWS session credentials to .aws-mfa-session-credentials")
-                    }
-
-                    // Add static provider for new session credentials
-                    credentialsChainBuilder.addCredentialsProvider(
-                        StaticCredentialsProvider.create(credentials))
-                }
-
-                // Enroll named profile provider next in the credentials chain
-                credentialsChainBuilder.addCredentialsProvider(
-                    ProfileCredentialsProvider
-                        .builder()
-                        .profileFile(profileFile)
-                        .build())
-            }
+            // Enroll named profile provider next in the credentials chain
+            credentialsChainBuilder.addCredentialsProvider(
+                ProfileCredentialsProvider
+                    .builder()
+                    .profileFile(profileFile)
+                    .build())
         }
 
         // Lastly, enroll the default credentials provider in the chain
@@ -224,6 +242,9 @@ trait AwsConfigurable implements PropertiesFileUtilities {
         return credentialsChainBuilder.build()
     }
 
+    /**
+     * Internal helper class to build an AssumeRoleRequest for MFA challenges.
+     */
     static protected class StsRequestBuilder implements Consumer<AssumeRoleRequest.Builder> {
 
         def awsProfile

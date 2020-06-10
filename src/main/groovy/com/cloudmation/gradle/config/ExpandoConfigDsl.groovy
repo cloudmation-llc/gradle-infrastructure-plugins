@@ -16,13 +16,12 @@
 
 package com.cloudmation.gradle.config
 
-import com.cloudmation.gradle.aws.traits.DelegatedOwner
+import com.cloudmation.gradle.traits.DelegatedOwner
 
 class ExpandoConfigDsl extends Expando implements DelegatedOwner {
 
     /**
-     * Dedicated name field specifically for supporting Gradle task DSL and nested property blocks.
-     * @link https://docs.gradle.org/current/javadoc/org/gradle/api/NamedDomainObjectContainer.html
+     * Optional name to identify this config block. Useful for debugging.
      */
     protected final String name
 
@@ -58,7 +57,7 @@ class ExpandoConfigDsl extends Expando implements DelegatedOwner {
     /**
      * Create a new typed DSL object and add it as a named property on this expand.
      * @param key Property name
-     * @param dslType Class type to use for instaniating the DSL object
+     * @param dslType Class type to use for constructing the DSL object
      * @return The newly created DSL instance
      */
     def createdNestedDsl(String key, Class dslType) {
@@ -177,7 +176,7 @@ class ExpandoConfigDsl extends Expando implements DelegatedOwner {
 
     @Override
     String toString() {
-        return "${this.getProperties()}"
+        return "[${name}]: ${this.getProperties()}"
     }
 
 }
