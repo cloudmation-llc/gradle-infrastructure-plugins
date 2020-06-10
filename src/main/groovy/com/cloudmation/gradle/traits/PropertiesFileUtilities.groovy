@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package com.cloudmation.gradle.traits
 
 import java.nio.file.Files
@@ -26,7 +25,7 @@ trait PropertiesFileUtilities {
         def props = new Properties()
 
         // Check if the source file exists, and read it
-        // Otherwise an empty properties collection is returned
+        // (otherwise an empty properties collection is returned)
         if(Files.exists(path)) {
             Files.newBufferedReader(path).withCloseable {
                 props.load(it)
