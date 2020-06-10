@@ -62,20 +62,18 @@ output = json
 
 ### Setting Resource Tags
 
-The AWS block supports providing resource tags. Set the `tags` property to a Map, and provide as many key-value pairs as you want within the limits supported by the specific resource you are working with.
+The AWS block supports providing resource tags. Call the `tag` method for each key-value pair, and provide as many pairs as you want within the limits supported by the specific resource you are working with.
 
 ```groovy
 aws {
-    tags = [
-        "tag-key": "tag-value",
-        "another-key": "another-value"
-    ]
+    tag "tag-key", "tag-value"
+    tag "another-key", "another-value"
 }
 ```
 
 ### Tag Merging
 
-Most properties are overriden at the deepest point where they are assigned. Tags are one of the exceptions where the final tags assigned to a resource are the result of merging together all of the tags found in the project hierarchy.
+Most properties are overridden at the deepest point where they are assigned. Tags are one of the exceptions where the final tags assigned to a resource are the result of merging together all of the tags found in the project hierarchy.
 
 You might look at it this way: root tags + subproject(s) tags + task tags = tags applied to the resource.
 

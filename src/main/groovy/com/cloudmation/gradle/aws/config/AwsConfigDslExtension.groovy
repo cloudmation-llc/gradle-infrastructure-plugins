@@ -20,8 +20,14 @@ import com.cloudmation.gradle.config.ExpandoConfigDsl
 
 class AwsConfigDslExtension extends ExpandoConfigDsl {
 
+    Map<String, String> tags = new HashMap()
+
     AwsConfigDslExtension() {
         super("aws")
+    }
+
+    def tag(String key, String value) {
+        tags.put(key, value)
     }
 
 }
