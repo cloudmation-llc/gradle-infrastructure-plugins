@@ -97,12 +97,12 @@ class CloudformationDeployStackTask extends AwsBaseTask {
             { it.aws?.cloudformation?.stackPrefix },
             ConfigScope.SELF, ConfigScope.PROJECT)
 
-        if(stackPrefix.isPresent()) {
-            return "${stackPrefix.get()}-${getTemplateName()}"
-        }
+        return stackPrefix
+            // Check if the prefix is intentionally an empty string
+            .map({ String prefix -> (prefix.length() > 0) ? "${prefix}-${getTemplateName()}" : getTemplateName() })
 
-        // By default, generate a stack name from the project name and template name
-        return "${project.name}-${getTemplateName()}"
+            // By default, generate a stack name from the project name and template name
+            .orElse("${project.name}-${getTemplateName()}")
     }
 
     @Override
