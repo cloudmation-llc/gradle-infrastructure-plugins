@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws.traits
+package com.cloudmation.gradle.traits
 
 trait DelegatedOwner {
 

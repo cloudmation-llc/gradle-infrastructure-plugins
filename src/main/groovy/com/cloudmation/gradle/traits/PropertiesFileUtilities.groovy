@@ -15,31 +15,36 @@
  */
 
 
-package com.cloudmation.gradle.aws.traits
+package com.cloudmation.gradle.traits
+
+import java.nio.file.Files
+import java.nio.file.Path
 
 trait PropertiesFileUtilities {
 
-    Properties getPropertiesFile(File propertiesFile) {
-        def properties = new Properties()
+    Properties getPropertiesFile(Path path) {
+        def props = new Properties()
 
         // Check if the source file exists, and read it
         // Otherwise an empty properties collection is returned
-        if(propertiesFile.exists()) {
-            propertiesFile.withReader { properties.load(it) }
+        if(Files.exists(path)) {
+            Files.newBufferedReader(path).withCloseable {
+                props.load(it)
+            }
         }
 
-        return properties
+        return props
     }
 
-    def withPropertiesFile(File propertiesFile, Closure handler) {
+    def withPropertiesFile(Path path, Closure handler) {
         // Get existing/create properties collection
-        def properties = getPropertiesFile(propertiesFile)
+        def props = getPropertiesFile(path)
 
         // Apply the closure to set new properties
-        properties.with(handler)
+        props.with(handler)
 
         // Save
-        propertiesFile.withWriter { properties.store(it, null) }
+        Files.newBufferedWriter(path).withCloseable { props.store(it, null) }
     }
 
 }
