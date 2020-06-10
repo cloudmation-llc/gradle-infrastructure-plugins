@@ -16,7 +16,7 @@
 
 package com.cloudmation.gradle.aws.cloudformation
 
-import com.cloudmation.gradle.aws.config.AwsConfigDslExtension
+import com.cloudmation.gradle.aws.config.AwsConfigDsl
 import com.cloudmation.gradle.aws.config.TaskGenerationDsl
 import org.apache.commons.text.CaseUtils
 import org.gradle.api.Plugin
@@ -54,11 +54,11 @@ class CloudformationProjectPlugin implements Plugin<Project> {
             }
 
             // Create AWS configuration extension on subproject
-            def projectAwsConfig = subproject.extensions.create("aws", AwsConfigDslExtension.class)
+            def projectAwsConfig = subproject.extensions.create("aws", AwsConfigDsl.class)
             projectAwsConfig.delegateOwner = subproject
 
             // Create a 'cloudformation' config block
-            def projectCfConfig = projectAwsConfig.createdNestedDsl("cloudformation")
+            def projectCfConfig = projectAwsConfig.createdNestedDsl("cloudformation", CloudformationConfigDsl.class)
 
             // Create typed task generation DSL
             def projectTaskGenConfig = projectCfConfig.createdNestedDsl("taskGeneration", TaskGenerationDsl.class)

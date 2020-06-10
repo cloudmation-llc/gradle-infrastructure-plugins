@@ -17,14 +17,12 @@
 package com.cloudmation.gradle.aws.config
 
 import com.cloudmation.gradle.config.ExpandoConfigDsl
+import groovy.transform.InheritConstructors
 
-class AwsConfigDslExtension extends ExpandoConfigDsl {
+@InheritConstructors
+class AwsConfigDsl extends ExpandoConfigDsl {
 
     Map<String, String> tags = new HashMap()
-
-    AwsConfigDslExtension() {
-        super("aws")
-    }
 
     def tag(String key, String value) {
         tags.put(key, value)

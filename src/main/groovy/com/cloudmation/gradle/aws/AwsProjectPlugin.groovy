@@ -16,7 +16,7 @@
 
 package com.cloudmation.gradle.aws
 
-import com.cloudmation.gradle.aws.config.AwsConfigDslExtension
+import com.cloudmation.gradle.aws.config.AwsConfigDsl
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -29,7 +29,7 @@ class AwsProjectPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         // Create AWS configuration extension on root project
-        def awsConfig = project.extensions.create("aws", AwsConfigDslExtension.class)
+        def awsConfig = project.extensions.create("aws", AwsConfigDsl.class)
         awsConfig.delegateOwner = project
     }
 

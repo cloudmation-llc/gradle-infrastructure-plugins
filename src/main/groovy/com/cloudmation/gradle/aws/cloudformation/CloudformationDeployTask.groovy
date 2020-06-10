@@ -16,7 +16,7 @@
 
 package com.cloudmation.gradle.aws.cloudformation
 
-import com.cloudmation.gradle.aws.config.AwsConfigDslExtension
+import com.cloudmation.gradle.aws.config.AwsConfigDsl
 import com.cloudmation.gradle.aws.config.ConfigScope
 
 import com.cloudmation.gradle.aws.traits.AwsConfigurable
@@ -27,7 +27,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient
 import software.amazon.awssdk.services.cloudformation.model.*
@@ -50,7 +49,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
 
     CloudformationDeployTask() {
         // Create AWS configuration extension
-        def awsConfig = extensions.create("aws", AwsConfigDslExtension.class)
+        def awsConfig = extensions.create("aws", AwsConfigDsl.class)
         awsConfig.delegateOwner = project
     }
 
@@ -105,8 +104,8 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
      * @return The extension object
      */
     @Internal
-    AwsConfigDslExtension getAws() {
-        return extensions.getByName("aws") as AwsConfigDslExtension
+    AwsConfigDsl getAws() {
+        return extensions.getByName("aws") as AwsConfigDsl
     }
 
     @Internal

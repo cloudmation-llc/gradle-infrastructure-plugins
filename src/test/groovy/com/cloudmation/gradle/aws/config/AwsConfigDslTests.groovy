@@ -26,9 +26,9 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 @DisplayName("Tests for AWS configuration DSL with static and dynamic features")
 @TestInstance(PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class AwsConfigDslExtensionTests {
+class AwsConfigDslTests {
 
-    AwsConfigDslExtension extension = new AwsConfigDslExtension()
+    AwsConfigDsl extension = new AwsConfigDsl()
 
     @Test
     @Order(1)

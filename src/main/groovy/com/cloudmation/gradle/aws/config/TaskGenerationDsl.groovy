@@ -17,11 +17,13 @@
 package com.cloudmation.gradle.aws.config
 
 import com.cloudmation.gradle.config.ExpandoConfigDsl
+import groovy.transform.InheritConstructors
 
 /**
  * Domain specific extension with properties and utilities for controlling the behavior of plugins that automatically
  * create project tasks according to conventions.
  */
+@InheritConstructors
 class TaskGenerationDsl extends ExpandoConfigDsl {
 
     @SuppressWarnings('GroovyUncheckedAssignmentOfMemberOfRawType')

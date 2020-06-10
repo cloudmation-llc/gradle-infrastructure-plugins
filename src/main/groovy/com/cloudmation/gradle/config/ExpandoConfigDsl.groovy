@@ -61,8 +61,12 @@ class ExpandoConfigDsl extends Expando implements DelegatedOwner {
      * @return The newly created DSL instance
      */
     def createdNestedDsl(String key, Class dslType) {
-        def dslInstance = dslType.getConstructor().newInstance()
+        def dslInstance = dslType
+            .getConstructor(String.class, Object.class)
+            .newInstance(key, delegateOwner)
+
         getProperties().put(key, dslInstance)
+
         return dslInstance
     }
 
