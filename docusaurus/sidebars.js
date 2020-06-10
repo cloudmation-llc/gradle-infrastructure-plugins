@@ -14,7 +14,7 @@ module.exports = {
           label: 'CloudFormation',
           items: [
             'aws/cloudformation/cf-getting-started',
-            'aws/cloudformation/cf-tutorial',
+            'aws/cloudformation/cf-tutorial-basics',
             'aws/cloudformation/cf-config'
           ]
         },

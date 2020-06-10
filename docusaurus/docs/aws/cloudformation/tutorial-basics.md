@@ -1,7 +1,7 @@
 ---
-id: cf-tutorial
-title: Tutorial
-sidebar_label: Tutorial
+id: cf-tutorial-basics
+title: Tutorial (The Basics)
+sidebar_label: Tutorial (The Basics)
 ---
 
 import useBaseUrl from '@docusaurus/useBaseUrl';
