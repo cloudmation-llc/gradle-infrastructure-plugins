@@ -8,7 +8,7 @@ module.exports = {
   themeConfig: {
     disableDarkMode: true,
     prism: {
-      additionalLanguages: ['groovy', 'properties']  
+      additionalLanguages: ['groovy', 'ini', 'properties']  
     },
     navbar: {
       title: 'Infrastructure Gradle Plugins by Cloudmation',
