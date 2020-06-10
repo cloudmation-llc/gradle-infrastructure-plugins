@@ -16,10 +16,9 @@
 
 package com.cloudmation.gradle.aws.cloudformation
 
-import com.cloudmation.gradle.aws.config.MapConfigurationExtension
-import com.cloudmation.gradle.aws.config.TaskGenerationConfigExtension
+import com.cloudmation.gradle.aws.config.AwsConfigDslExtension
+import com.cloudmation.gradle.aws.config.TaskGenerationDsl
 import org.apache.commons.text.CaseUtils
-import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
@@ -55,17 +54,14 @@ class CloudformationProjectPlugin implements Plugin<Project> {
             }
 
             // Create AWS configuration extension on subproject
-            def projectAwsConfig = subproject.extensions.create("aws", MapConfigurationExtension.class)
-            def projectCfConfig = projectAwsConfig.createScope("cloudformation")
+            def projectAwsConfig = subproject.extensions.create("aws", AwsConfigDslExtension.class)
+            projectAwsConfig.delegateOwner = subproject
 
-            // Create task generation extension
-            def projectTaskGenConfig = projectCfConfig.extensions.create("taskGeneration", TaskGenerationConfigExtension.class)
+            // Create a 'cloudformation' config block
+            def projectCfConfig = projectAwsConfig.createdNestedDsl("cloudformation")
 
-            // Add a CloudFormation custom stack DSL
-            NamedDomainObjectContainer<CloudformationDeployTaskCreationSpec> deployTaskCreationContainer =
-                subproject.container(CloudformationDeployTaskCreationSpec)
-
-            projectCfConfig.extensions.add("stacks", deployTaskCreationContainer)
+            // Create typed task generation DSL
+            def projectTaskGenConfig = projectCfConfig.createdNestedDsl("taskGeneration", TaskGenerationDsl.class)
 
             // Wait until subproject is completely evaluated
             subproject.afterEvaluate {
@@ -119,8 +115,8 @@ class CloudformationProjectPlugin implements Plugin<Project> {
                 })
 
                 // Iterate through custom stack definitions
-                def customStacks = projectCfConfig.extensions.getByName('stacks')
-                customStacks.all { creationSpec ->
+                def customStacks = projectCfConfig?.stacks
+                customStacks?.each { stackName, creationSpec ->
                     def camelBaseName = camelCase(creationSpec.name)
                     def camelTaskPrefix = camelCase(projectCfConfig.taskPrefix ?: "")
                     def finalBaseName = "${camelTaskPrefix}${camelBaseName}"

@@ -14,24 +14,16 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws.config
+package com.cloudmation.gradle.aws.traits
 
-class MapConfigurationExtension {
+trait DelegatedOwner {
 
-    private Map<String, Object> propertyStorage = new HashMap<>()
-
-    def propertyMissing(String key, value) {
-        propertyStorage.put(key, value)
+    def getDelegateOwner() {
+        getProperties().get("delegateOwner")
     }
 
-    def propertyMissing(String key) {
-        return propertyStorage.get(key)
-    }
-
-    def createScope(String name) {
-        def extension = extensions.create(name, MapConfigurationExtension.class)
-        propertyStorage.put(name, extension)
-        return extension
+    def setDelegateOwner(delegateOwner) {
+        getProperties().put("delegateOwner", delegateOwner)
     }
 
 }

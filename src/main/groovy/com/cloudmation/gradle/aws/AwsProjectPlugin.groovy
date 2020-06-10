@@ -17,7 +17,6 @@
 package com.cloudmation.gradle.aws
 
 import com.cloudmation.gradle.aws.config.AwsConfigDslExtension
-import groovy.transform.CompileStatic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -25,13 +24,13 @@ import org.gradle.api.Project
  * Gradle project plugin which scans each :cloudformation subproject and performs additional project setup work
  * including dynamically generating tasks specifically for working with CloudFormation templates and deployments.
  */
-@CompileStatic
 class AwsProjectPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
         // Create AWS configuration extension on root project
-        project.extensions.create("aws", AwsConfigDslExtension.class)
+        def awsConfig = project.extensions.create("aws", AwsConfigDslExtension.class)
+        awsConfig.delegateOwner = project
     }
 
 }

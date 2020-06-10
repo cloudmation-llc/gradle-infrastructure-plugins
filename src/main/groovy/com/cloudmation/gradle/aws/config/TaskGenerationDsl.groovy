@@ -16,45 +16,46 @@
 
 package com.cloudmation.gradle.aws.config
 
-import com.google.common.collect.ArrayListMultimap
+import com.cloudmation.gradle.config.ExpandoConfigDsl
 
 /**
  * Domain specific extension with properties and utilities for controlling the behavior of plugins that automatically
  * create project tasks according to conventions.
  */
-class TaskGenerationConfigExtension {
+class TaskGenerationDsl extends ExpandoConfigDsl {
 
-    private ArrayListMultimap<String, Object> propertyStorage = ArrayListMultimap.create()
-
-    def group
+    @SuppressWarnings('GroovyUncheckedAssignmentOfMemberOfRawType')
+    private List<Closure> getRuleList(key) {
+        return properties.computeIfAbsent(key, { new ArrayList<Closure>() })
+    }
 
     def exclude(String pattern) {
-        propertyStorage.put("excludeRules", { String taskName ->
+        getRuleList("excludeRules").add({ String taskName ->
             return taskName ==~ pattern
         })
     }
 
     def exclude(Closure handler) {
-        propertyStorage.put("excludeRules", handler)
+        getRuleList("excludeRules").add(handler)
     }
 
     def isTaskExcluded(taskName) {
-        return propertyStorage.get("excludeRules").any { handler -> handler(taskName)}
+        return getRuleList("excludeRules").any { handler -> handler(taskName)}
     }
 
     def include(String pattern) {
-        propertyStorage.put("includeRules", { String taskName ->
-            return pattern ==~ taskName
+        getRuleList("includeRules").add({ String taskName ->
+            return taskName ==~ pattern
         })
     }
 
     def include(Closure handler) {
-        propertyStorage.put("includeRules", handler)
+        getRuleList("includeRules").add(handler)
     }
 
     def isTaskIncluded(taskName) {
         // Check include rules
-        def allowedByRule = propertyStorage.get("includeRules").any { handler -> handler(taskName)}
+        def allowedByRule = getRuleList("includeRules").any { handler -> handler(taskName)}
         if(allowedByRule) {
             return true
         }

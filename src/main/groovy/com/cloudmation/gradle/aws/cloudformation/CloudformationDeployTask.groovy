@@ -16,8 +16,9 @@
 
 package com.cloudmation.gradle.aws.cloudformation
 
+import com.cloudmation.gradle.aws.config.AwsConfigDslExtension
 import com.cloudmation.gradle.aws.config.ConfigScope
-import com.cloudmation.gradle.aws.config.MapConfigurationExtension
+
 import com.cloudmation.gradle.aws.traits.AwsConfigurable
 import com.cloudmation.gradle.aws.traits.DynamicTaskProperties
 import com.cloudmation.gradle.util.AnsiColors
@@ -26,7 +27,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient
 import software.amazon.awssdk.services.cloudformation.model.*
@@ -49,10 +50,8 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
 
     CloudformationDeployTask() {
         // Create AWS configuration extension
-        def awsConfig = extensions.create("aws", MapConfigurationExtension.class)
-
-        // Create cloudformation namespace
-        awsConfig.createScope("cloudformation")
+        def awsConfig = extensions.create("aws", AwsConfigDslExtension.class)
+        awsConfig.delegateOwner = project
     }
 
     @Internal
@@ -106,8 +105,8 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
      * @return The extension object
      */
     @Internal
-    MapConfigurationExtension getAws() {
-        return extensions.getByName("aws") as MapConfigurationExtension
+    AwsConfigDslExtension getAws() {
+        return extensions.getByName("aws") as AwsConfigDslExtension
     }
 
     @Internal
@@ -134,6 +133,7 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
         return "${project.name}-${getTemplateName()}"
     }
 
+    @SuppressWarnings('GroovyAssignabilityCheck')
     @TaskAction
     void deploy() {
         // Create a CloudFormation client builder
@@ -145,15 +145,8 @@ class CloudformationDeployTask extends DefaultTask implements AwsConfigurable, D
             cloudformationClientBuilder.region(Region.of(region))
         }
 
-        // Optionally, use a specific AWS credentials profile
-        lookupAwsProperty { it.aws?.profile} . ifPresent { String profile ->
-            logger.lifecycle("Using credentials profile ${profile} for deployment")
-            cloudformationClientBuilder.credentialsProvider(
-                ProfileCredentialsProvider
-                    .builder()
-                    .profileName(profile)
-                    .build())
-        }
+        // Build the credentials provider chain
+        cloudformationClientBuilder.credentialsProvider(resolveCredentialsProvider())
 
         // Create the CloudFormation client
         this.cloudformationClient = cloudformationClientBuilder.build()

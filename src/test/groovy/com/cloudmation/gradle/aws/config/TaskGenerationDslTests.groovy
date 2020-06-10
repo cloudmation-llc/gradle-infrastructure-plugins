@@ -30,9 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue
 @DisplayName("Test rules for controlling task generation")
 @TestInstance(PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class TaskGenerationConfigExtensionTests {
+class TaskGenerationDslTests {
 
-    TaskGenerationConfigExtension extension = new TaskGenerationConfigExtension()
+    TaskGenerationDsl extension = new TaskGenerationDsl()
 
     @Test
     @Order(1)

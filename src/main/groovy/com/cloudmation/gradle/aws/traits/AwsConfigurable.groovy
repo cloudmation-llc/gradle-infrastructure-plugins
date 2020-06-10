@@ -18,16 +18,22 @@ package com.cloudmation.gradle.aws.traits
 
 import com.cloudmation.gradle.aws.config.ConfigScope
 import org.gradle.api.Project
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
-import software.amazon.awssdk.regions.Region
+import org.gradle.api.internal.tasks.userinput.UserInputHandler
+import org.threeten.extra.AmountFormats
+import software.amazon.awssdk.auth.credentials.*
+import software.amazon.awssdk.profiles.ProfileFile
 import software.amazon.awssdk.services.sts.StsClient
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider
 import software.amazon.awssdk.services.sts.model.AssumeRoleRequest
 
+import java.time.Duration
+import java.time.LocalDateTime
+import java.util.function.Consumer
+
 /**
- * Groovy trait that adds AWS configuration lookup superpowers to a task.
+ * Groovy trait that adds AWS configuration superpowers to a task.
  */
-trait AwsConfigurable {
+trait AwsConfigurable implements PropertiesFileUtilities {
 
     /**
      * Walk the configured scopes (task, project, etc.) to find the first non-null value requested
@@ -120,71 +126,137 @@ trait AwsConfigurable {
         }
     }
 
-    def withCredentialsProvider(Closure handler) {
-        // Lookup a configured region
-        def region = lookupAwsProperty { it.aws?.region }
+    @SuppressWarnings('GroovyAssignabilityCheck')
+    AwsCredentialsProviderChain resolveCredentialsProvider() {
+        // Create an AWS credentials chain builder to combine multiple methods
+        def credentialsChainBuilder = AwsCredentialsProviderChain.builder()
 
-        // Lookup if a credential profile is configured
-        def profileLookup = lookupAwsProperty { it.aws?.profile }
-        def profileProvider = profileLookup.map { String configuredProfile ->
-            ProfileCredentialsProvider
-                .builder()
-                .profileName(configuredProfile)
-                .build()
-        }
+        // Check for an MFA session file
+        def mfaCredentialsFile = project.rootProject.file(".aws-mfa-session-credentials")
+        def mfaCredentials = getPropertiesFile(mfaCredentialsFile)
+        if(mfaCredentials.containsKey("accessKeyId")
+            && mfaCredentials.containsKey("secretKeyId")
+            && mfaCredentials.containsKey("sessionToken")
+            && mfaCredentials.containsKey("expires")) {
 
-        // Lookup if we should assume a specific role for credentials
-        def assumeRoleArn = lookupAwsProperty { it.aws?.assumeRole } . orElse(null)
-        if(assumeRoleArn) {
-            // Lookup if MFA is expected as part of the role assumption
-            def requestsMfa = lookupAwsProperty { it.aws?.mfa }
+            // Check the expiration date
+            LocalDateTime expiration = LocalDateTime.parse(mfaCredentials.getProperty("expires"))
+            LocalDateTime now = LocalDateTime.now()
+            if(expiration.isAfter(now)) {
+                // Add a static credentials provider
+                AwsSessionCredentials sessionCredentials = AwsSessionCredentials
+                    .create(
+                        mfaCredentials.getProperty("accessKeyId"),
+                        mfaCredentials.getProperty("secretKeyId"),
+                        mfaCredentials.getProperty("sessionToken"))
 
-            // Create a new STS client builder
-            def stsClientBuilder = StsClient.builder()
+                credentialsChainBuilder.addCredentialsProvider(
+                    StaticCredentialsProvider.create(sessionCredentials))
 
-            // Apply region if configured
-            region.ifPresent { String configuredRegion ->
-                stsClientBuilder.region(Region.of(configuredRegion))
-            }
+                if(logger) {
+                    // Calculate a helpful duration for when the expiration will happen
+                    def timeRemaining = Duration.between(now, expiration)
+                    def formattedDuration = AmountFormats.wordBased(timeRemaining, Locale.ENGLISH)
 
-            // Apply the credentials profile if configured
-            profileProvider.ifPresent { AwsCredentialsProvider provider ->
-                stsClientBuilder.credentialsProvider(provider)
-            }
-
-            // Build the STS client
-            def stsClient = stsClientBuilder.build()
-
-            // Construct the assume role request
-            def assumeRoleRequestBuilder = AssumeRoleRequest.builder()
-
-            // Add the role ARN to assume
-            assumeRoleRequestBuilder.roleArn(assumeRoleArn)
-
-            // If MFA is expected, prompt for the token now
-            // (reference: https://mrhaki.blogspot.com/2010/09/gradle-goodness-get-user-input-values.html)
-            if (requestsMfa.isPresent()) {
-                if (requestsMfa.get()) {
-                    def console = System.console()
-                    if (console) {
-                        def token = console.readLine('> Please enter the 6-digit MFA token: ')
-                        assumeRoleRequestBuilder.tokenCode(token)
-                    } else {
-                        throw new RuntimeException("MFA is requested, but could not get a console instance to read input")
-                    }
+                    logger.lifecycle("Using existing MFA credentials from .aws-mfa-session-credentials (expires in ${formattedDuration})")
                 }
             }
-
-            // Finish building the assume role request
-            def assumeRoleRequest = assumeRoleRequestBuilder.build() as AssumeRoleRequest
-
-            // Send the role assumption request
-            def assumeRoleResponse = stsClient.assumeRole(assumeRoleRequest)
-
-            // Execute the provider handler with the session credentials
-            handler(assumeRoleResponse.credentials())
         }
+        else {
+            // Lookup if a named profile should be used
+            lookupAwsProperty { it.aws?.profile }.ifPresent { profileName ->
+                def profileFile = ProfileFile.defaultProfileFile()
+                def profile = profileFile
+                    .profile(profileName)
+                    .orElseThrow({ new RuntimeException("Could not resolved named AWS profile $profileName")})
+                    .properties()
+
+                // Check if a role should be assumed and MFA is expected
+                if(profile.role_arn && profile.mfa_serial) {
+                    // Create an AWS STS assume role credentials provider
+                    def stsAssumeRoleProvider = StsAssumeRoleCredentialsProvider
+                        .builder()
+                        .stsClient(StsClient.create())
+                        .refreshRequest(new StsRequestBuilder(profile, this))
+                        .build()
+
+                    // Request session credentials
+                    AwsSessionCredentials credentials = stsAssumeRoleProvider.resolveCredentials()
+
+                    // Write session credentials to local properties file
+                    withPropertiesFile(mfaCredentialsFile, {
+                        // Set AWS credential properties
+                        setProperty("accessKeyId", credentials.accessKeyId())
+                        setProperty("secretKeyId", credentials.secretAccessKey())
+                        setProperty("sessionToken", credentials.sessionToken())
+
+                        // Add an expiration timestamp
+                        def expiresInSeconds = Long.parseLong(profile.getOrDefault("duration_seconds", "3600"))
+                        def expiresTimestamp = LocalDateTime
+                            .now()
+                            .plusSeconds(expiresInSeconds)
+
+                        setProperty("expires", expiresTimestamp.toString())
+                    })
+
+                    if(logger) {
+                        logger.lifecycle("Wrote new AWS session credentials to .aws-mfa-session-credentials")
+                    }
+
+                    // Add static provider for new session credentials
+                    credentialsChainBuilder.addCredentialsProvider(
+                        StaticCredentialsProvider.create(credentials))
+                }
+
+                // Enroll named profile provider next in the credentials chain
+                credentialsChainBuilder.addCredentialsProvider(
+                    ProfileCredentialsProvider
+                        .builder()
+                        .profileFile(profileFile)
+                        .build())
+            }
+        }
+
+        // Lastly, enroll the default credentials provider in the chain
+        credentialsChainBuilder.addCredentialsProvider(DefaultCredentialsProvider.create())
+
+        // Return credentials provider chain
+        return credentialsChainBuilder.build()
     }
 
+    static protected class StsRequestBuilder implements Consumer<AssumeRoleRequest.Builder> {
+
+        def awsProfile
+        def parent
+
+        StsRequestBuilder(Map awsProfile, parent) {
+            this.awsProfile = awsProfile
+            this.parent = parent
+        }
+
+        @SuppressWarnings('GroovyAssignabilityCheck')
+        @Override
+        void accept(AssumeRoleRequest.Builder builder) {
+            // Set role ARN
+            builder.roleArn(awsProfile.role_arn)
+
+            // Set role session name (the SDK requires it)
+            builder.roleSessionName(awsProfile.role_session_name)
+
+            // Set the MFA device serial number
+            builder.serialNumber(awsProfile.mfa_serial)
+
+            // Optionally, set the duration of the session if configured
+            if(awsProfile.duration_seconds) {
+                builder.durationSeconds(Integer.parseInt(awsProfile.duration_seconds))
+            }
+
+            // Prompt the user for the current MFA code
+            def userInputService = parent.services.get(UserInputHandler.class) as UserInputHandler
+            def mfaCode = userInputService.askQuestion("Please enter the 6-digit MFA token for ${awsProfile.mfa_serial}", "000000")
+            builder.tokenCode(mfaCode)
+        }
+
+    }
 
 }
