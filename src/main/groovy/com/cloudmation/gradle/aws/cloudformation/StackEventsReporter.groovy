@@ -109,21 +109,18 @@ class StackEventsReporter extends CloudformationUtility implements Runnable {
                     // Build the log event
                     def logMessage = "${timestamp} - ${status}"
 
+                    // Is there a status reason?
+                    if(reason != null) {
+                        logMessage += ": ${reason}"
+                    }
+
                     // Is the resource event an actual resource, or a stack event?
                     if(logicalId != stackName) {
-                        logMessage += ": "
-
-                        if(reason != null) {
-                            logMessage += "${reason} "
-                        }
-
-                        logMessage += "(logical = ${logicalId}"
+                        logMessage += ": ${logicalId}"
 
                         if(physicalId?.length() > 0) {
-                            logMessage += ", physical = ${physicalId}"
+                            logMessage += ": ${physicalId}"
                         }
-
-                        logMessage += ")"
                     }
 
                     // Log
