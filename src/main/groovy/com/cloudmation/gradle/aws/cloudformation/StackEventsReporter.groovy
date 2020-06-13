@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2020 Cloudmation LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.cloudmation.gradle.aws.cloudformation
 
 import com.cloudmation.gradle.util.AnsiColors
@@ -151,7 +150,7 @@ class StackEventsReporter extends CloudformationUtility implements Runnable {
      * @param input The status string to be colorized
      * @return The input padded with ANSI escape codes if the status matches an expected pattern
      */
-    private static String colorizeResourceStatus(String input) {
+    protected static String colorizeResourceStatus(String input) {
         if(input.contains("FAILED") || input.contains("ROLLBACK")) {
             return AnsiColors.red(input)
         }
@@ -165,7 +164,7 @@ class StackEventsReporter extends CloudformationUtility implements Runnable {
     }
 
     /**
-     * Inner utility class to track when a stack event has already been logged as to avoid logging
+     * Inner utility class to track when a stack event has already been logged so as to avoid logging
      * an event more than once.
      */
     class StackEventWrapper {

@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2020 Cloudmation LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ import groovy.transform.CompileStatic
 
 /**
  * ANSI escape codes for colorizing log messages
- * @link https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html
+ * @see <a href="https://www.lihaoyi.com/post/BuildyourownCommandLinewithANSIescapecodes.html">Build your own Command Line with ANSI escape codes</a>
  */
 @CompileStatic
 class AnsiColors {
