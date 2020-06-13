@@ -16,6 +16,7 @@
 
 package com.cloudmation.gradle.aws.config
 
+
 import com.cloudmation.gradle.config.ExpandoConfigDsl
 import groovy.transform.InheritConstructors
 

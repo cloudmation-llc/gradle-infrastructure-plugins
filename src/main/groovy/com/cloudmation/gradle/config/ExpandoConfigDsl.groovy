@@ -18,6 +18,11 @@ package com.cloudmation.gradle.config
 
 import com.cloudmation.gradle.traits.DelegatedOwner
 
+/**
+ * Builds on the Groovy expando object to create an object that can automatically create nested instances of
+ * itself, or optionally, specialized types of config blocks. Designed specifically for use in Gradle build
+ * where closures are heavily used to provide a custom task DSL.
+ */
 class ExpandoConfigDsl extends Expando implements DelegatedOwner {
 
     /**
@@ -26,11 +31,11 @@ class ExpandoConfigDsl extends Expando implements DelegatedOwner {
     protected final String name
 
     ExpandoConfigDsl() {
-        this.name = null
+        this.name = "root"
     }
 
     ExpandoConfigDsl(Object owner) {
-        this.name = null
+        this.name = "root"
         this.delegateOwner = owner
     }
 
@@ -44,143 +49,93 @@ class ExpandoConfigDsl extends Expando implements DelegatedOwner {
     }
 
     /**
-     * Create a new expando DSL and add it as a named property on this expando.
-     * @param key Property name
-     * @return The newly created expando instance
-     */
-    def createdNestedDsl(String key) {
-        def expando = new ExpandoConfigDsl(key, delegateOwner)
-        getProperties().put(key, expando)
-        return expando
-    }
-
-    /**
-     * Create a new typed DSL object and add it as a named property on this expand.
-     * @param key Property name
-     * @param dslType Class type to use for constructing the DSL object
-     * @return The newly created DSL instance
-     */
-    def createdNestedDsl(String key, Class dslType) {
-        def dslInstance = dslType
-            .getConstructor(String.class, Object.class)
-            .newInstance(key, delegateOwner)
-
-        getProperties().put(key, dslInstance)
-
-        return dslInstance
-    }
-
-    /**
-     * Allow the expando properties to be iterated using a closure. Known internal properties such as
-     * delegate owner are ignored.
-     * @param handler 2 arg closure applied to each entry on the Map.
+     * Apply a closure to this expando.
+     * @param configurer
      * @return
      */
-    def each(Closure handler) {
-        getProperties().each { key, value ->
-            // Filter properties that should not be processed
-            if(key != "delegateOwner") {
-                handler(key, value)
-            }
-        }
+    def applyConfig(Closure configurer) {
+        // Reconfigure closure with different delegate and owner
+        def rehydratedConfigurer = configurer.rehydrate(this, this.delegateOwner, null)
+        rehydratedConfigurer.resolveStrategy = Closure.DELEGATE_FIRST
+        rehydratedConfigurer.call()
     }
 
     /**
-     * Configure missing method behavior to resolve properties from the expando if they exist, propagate method
-     * calls to a delegated owner if configured, create a nested configuration block if a Gradle closure DSL
-     * is provided as an argument, or lastly just set the property on the expando.
-     * @param key Property/nested block name
-     * @param args List of arguments
+     * Creates a nested config block of a given custom type. Used for implementing domain specific config blocks.
+     * @param blockName
+     * @param dslType
+     * @return
      */
-    @SuppressWarnings('GroovyAssignabilityCheck')
-    def methodMissing(String key, args) {
-        // Check if the expando already has the property
-        if(getProperties().containsKey(key)) {
-            def property = getProperties().get(key)
+    def createNestedDsl(String blockName, Class dslType) {
+        def configBlock = dslType
+            .getConstructor(String.class, Object.class)
+            .newInstance(blockName, delegateOwner)
 
-            // Check if we are attempting to configure an existing expand
-            // (could happen if we pre-create DSLs in a project plugin)
-            if(property instanceof ExpandoConfigDsl && args[0] instanceof Closure) {
-                handleExpandoConfig(property, args[0] as Closure)
-                return property
-            }
-            else {
-                return property
-            }
-        }
+        properties.put(blockName, configBlock)
 
-        // Check if the owner has the method
-        else if(delegateOwner?.metaClass?.respondsTo(key)) {
-            // Delegate method call to owner
-            return delegateOwner?.invokeMethod(key, args)
-        }
-
-        // Is the method call argument a Closure, and therefore likely to be a nested property block?
-        else if(args[0] instanceof Closure) {
-            // Create the descendent container on the expando properties
-            def dslContainer = new ExpandoConfigDsl(key, delegateOwner)
-
-            // Run the closure to configure the container
-            handleExpandoConfig(dslContainer, args[0] as Closure)
-
-            // Set the newly created container on the expando
-            getProperties().put(key, dslContainer)
-
-            // Return the new container
-            return dslContainer
-        }
-
-        // Default behavior: set the property on the expando
-        getProperties().put(key, args[0])
+        return configBlock
     }
 
     /**
-     * Helper method to handle configuration closures passed in from Gradle project DSL.
-     * @param dslContainer The expando being configured
-     * @param configClosure The closure with the configuration logic
+     * Customize Groovy method resolution to create (or fetch) nested config blocks, delegate to an owner object,
+     * or set a property on the expando (in that order).
+     * @param methodName Method/property name 
+     * @param args Method arguments
+     * @return A config block, the result of the parent method, or the property value just set.
      */
-    private def handleExpandoConfig(dslContainer, configClosure) {
-        def targetClosure
+    def methodMissing(String methodName, args) {
+        // Detect if handling a nested config block
+        if(args[0] instanceof Closure) {
+            def configBlock = properties.computeIfAbsent(methodName, { key ->
+                new ExpandoConfigDsl(methodName, this.delegateOwner)
+            })
+            
+            // Apply config closure
+            configBlock.applyConfig(args[0])
 
-        // If there is a delegate owner, then bind the closure with that
-        if(dslContainer.delegateOwner) {
-            targetClosure = configClosure.rehydrate(dslContainer, dslContainer.delegateOwner, this)
+            // Return the block
+            return configBlock
         }
-        else {
-            targetClosure = configClosure
-            targetClosure.delegate = dslContainer
+
+        // Check if the delegate owner will respond to the method
+        else if(delegateOwner?.respondsTo(methodName)) {
+            // Invoke the owner
+            return delegateOwner.invokeMethod(methodName, args)
         }
 
-        // Set the resolve strategy to the expando first, and owner second
-        targetClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        // Detect setting a property as a method (many Gradle tasks do this)
+        else if(args.length == 1) {
+            properties.put(methodName, args[0])
+            return args[0]
+        }
 
-        // Run the config closure
-        targetClosure.call()
+        // Else throw an error so we can detect strange behavior
+        throw new MissingMethodException(methodName, this.class, args)
     }
 
     /**
-     * Configure missing property behavior to create an expando for dynamically assigning properties.
-     * @param key Property name
-     * @return The property value if resolved on the expando, or a new expando if referencing a new nested property
+     * Fetch missing properties from the underlying expando.
+     * @param name The property name
+     * @return
      */
-    def propertyMissing(String key) {
-        // Map missing properties onto the expando
-        return getProperties().get(key)
+    def propertyMissing(String name) {
+        // Pass through to the underlying expando properties map
+        properties.get(name)
     }
 
     /**
-     * Configure missing property behavior where the value is provided to set the property on the expando.
-     * @param key Property name
-     * @param value Assigned property value
+     * Set missing properties on the underlying expando.
+     * @param name The property name
+     * @param value The property value
      */
-    def propertyMissing(String key, Object value) {
-        // Set the property on the expando
-        getProperties().put(key, value)
+    def propertyMissing(String name, Object value) {
+        // Pass through to the underlying expando properties map
+        properties.put(name, value)
     }
 
     @Override
     String toString() {
-        return "[${name}]: ${this.getProperties()}"
+        return "${properties}"
     }
 
 }

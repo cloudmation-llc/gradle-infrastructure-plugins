@@ -34,7 +34,7 @@ class AwsProjectPlugin implements Plugin<Project> {
         awsConfig.delegateOwner = project
 
         // Create typed task generation DSL
-        awsConfig.createdNestedDsl("taskGeneration", TaskGenerationDsl.class)
+        awsConfig.createNestedDsl("taskGeneration", TaskGenerationDsl.class)
     }
 
 }

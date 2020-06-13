@@ -46,8 +46,8 @@ class CloudformationDeployStackTask extends AwsBaseTask {
     CloudformationDeployStackTask() {
         super()
 
-        // Create a 'cloudformation' nested config block
-        aws.createdNestedDsl("cloudformation", CloudformationConfigDsl.class)
+        // Create the CloudFormaton nested block in advance
+        aws.createNestedDsl("cloudformation", CloudformationConfigDsl)
     }
 
     @Internal
@@ -106,12 +106,12 @@ class CloudformationDeployStackTask extends AwsBaseTask {
     }
 
     @Override
-    def methodMissing(String name, Object args) {
+    def methodMissing(String methodName, Object args) {
         // Call the parent class implementation
-        def superResult = super.methodMissing(name, args)
+        def superResult = super.methodMissing(methodName, args)
 
         // If null, delegate to the CloudFormation config DSL
-        return (superResult) ? superResult : aws?.cloudformation?.invokeMethod(name, args)
+        return (superResult) ? superResult : aws?.cloudformation?.invokeMethod(methodName, args)
     }
 
     @SuppressWarnings('GroovyAssignabilityCheck')

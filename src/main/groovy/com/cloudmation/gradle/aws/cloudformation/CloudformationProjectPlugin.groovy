@@ -59,10 +59,10 @@ class CloudformationProjectPlugin implements Plugin<Project> {
             awsConfig.delegateOwner = subproject
 
             // Create typed task generation DSL
-            def taskGenConfig = awsConfig.createdNestedDsl("taskGeneration", TaskGenerationDsl.class)
+            def taskGenConfig = awsConfig.createNestedDsl("taskGeneration", TaskGenerationDsl.class)
 
             // Create a 'cloudformation' config block
-            def cfConfig = awsConfig.createdNestedDsl("cloudformation", CloudformationConfigDsl.class)
+            def cfConfig = awsConfig.createNestedDsl("cloudformation", CloudformationConfigDsl.class)
 
             // Wait until subproject is completely evaluated
             subproject.afterEvaluate {

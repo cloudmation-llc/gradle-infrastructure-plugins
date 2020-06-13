@@ -25,13 +25,6 @@ class CloudformationLintTask extends AwsBaseTask {
 
     @InputFile File templateFile
 
-    CloudformationLintTask() {
-        super()
-
-        // Create a 'cloudformation' nested config block
-        aws.createdNestedDsl("cloudformation", CloudformationConfigDsl.class)
-    }
-
     @Override
     def methodMissing(String name, def args) {
         // Ignore missing methods
