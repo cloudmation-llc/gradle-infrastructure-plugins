@@ -81,11 +81,8 @@ class CloudformationProjectPlugin implements Plugin<Project> {
                 subproject.projectDir.eachFileMatch(FILES, ~/.*\.(y[a]?ml|json)/, { File template ->
                     def (baseName, extension) = template.name.split("[.]")
                     def camelBaseName = camelCase(baseName)
-                    def camelTaskPrefix = camelCase(cfConfig.taskPrefix ?: "")
+                    def camelTaskPrefix = camelCase(taskGenConfig.taskPrefix ?: "")
                     def finalBaseName = "${camelTaskPrefix}${camelBaseName}"
-                    def pathProject = project.projectDir.toPath()
-                    def pathSubproject = subproject.projectDir.toPath()
-                    def relativePath = pathProject.relativize(pathSubproject)
 
                     // Check if lint task should be included based on naming rules
                     def lintTaskName = "lint${finalBaseName}"
