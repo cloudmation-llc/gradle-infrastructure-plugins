@@ -144,11 +144,13 @@ trait AwsConfigurable implements PropertiesFileUtilities {
         // Check to see if a named profile is requested
         def awsProfileName = lookupAwsProperty { it.aws?.profile }.orElse(null)
         if(awsProfileName) {
-            def profileFile = ProfileFile.defaultProfileFile()
-            def profile = profileFile
+            def namedProfile = ProfileFile
+                .defaultProfileFile()
                 .profile(awsProfileName)
                 .orElseThrow({ new RuntimeException("Could not resolved named AWS profile $awsProfileName") })
                 .properties()
+
+            logger.lifecycle("Using named profile ${awsProfileName} for credentials")
 
             // Check if session credentials for the named profile already exist
             Path pathMfaCredentials = Paths.get(System.getProperty("java.io.tmpdir"), ".aws-mfa-session-${awsProfileName}")
@@ -191,12 +193,12 @@ trait AwsConfigurable implements PropertiesFileUtilities {
             }
 
             // Check if a role should be assumed and MFA is expected
-            if(profile.role_arn && profile.mfa_serial) {
+            if(namedProfile.role_arn && namedProfile.mfa_serial) {
                 // Create an AWS STS assume role credentials provider
                 def stsAssumeRoleProvider = StsAssumeRoleCredentialsProvider
                     .builder()
                     .stsClient(StsClient.create())
-                    .refreshRequest(new StsRequestBuilder(profile, this))
+                    .refreshRequest(new StsRequestBuilder(namedProfile, this))
                     .build()
 
                 // Request session credentials
@@ -210,7 +212,7 @@ trait AwsConfigurable implements PropertiesFileUtilities {
                     setProperty("sessionToken", credentials.sessionToken())
 
                     // Add an expiration timestamp
-                    def expiresInSeconds = Long.parseLong(profile.getOrDefault("duration_seconds", "3600"))
+                    def expiresInSeconds = Long.parseLong(namedProfile.getOrDefault("duration_seconds", "3600"))
                     def expiresTimestamp = LocalDateTime
                         .now()
                         .plusSeconds(expiresInSeconds)
@@ -231,7 +233,7 @@ trait AwsConfigurable implements PropertiesFileUtilities {
             credentialsChainBuilder.addCredentialsProvider(
                 ProfileCredentialsProvider
                     .builder()
-                    .profileFile(profileFile)
+                    .profileName(awsProfileName)
                     .build())
         }
 
