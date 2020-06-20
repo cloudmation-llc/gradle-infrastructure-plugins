@@ -88,9 +88,6 @@ class CloudformationDeployStackTask extends AwsBaseTask {
     String getGeneratedStackName() {
         // Check if the task defines a specific stack name
         def taskStackName = propertyOverrides.get("stackName")
-        if(taskStackName) {
-            return taskStackName
-        }
 
         // Check if the task or the containing project have an alternate stack prefix configured
         def stackPrefix = lookupAwsProperty(
@@ -99,10 +96,10 @@ class CloudformationDeployStackTask extends AwsBaseTask {
 
         return stackPrefix
             // Check if the prefix is intentionally an empty string
-            .map({ String prefix -> (prefix.length() > 0) ? "${prefix}-${getTemplateName()}" : getTemplateName() })
+            .map({ String prefix -> (prefix.length() > 0) ? "${prefix}-${getTemplateName()}" : taskStackName ?: getTemplateName() })
 
             // By default, generate a stack name from the project name and template name
-            .orElse("${project.name}-${getTemplateName()}")
+            .orElse("${project.name}-${taskStackName ?: getTemplateName()}")
     }
 
     @Override
