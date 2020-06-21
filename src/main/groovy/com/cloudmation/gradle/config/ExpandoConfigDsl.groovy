@@ -28,15 +28,10 @@ class ExpandoConfigDsl extends Expando implements DelegatedOwner {
     /**
      * Optional name to identify this config block. Useful for debugging.
      */
-    protected final String name
+    protected String name
 
     ExpandoConfigDsl() {
         this.name = "root"
-    }
-
-    ExpandoConfigDsl(Object owner) {
-        this.name = "root"
-        this.delegateOwner = owner
     }
 
     ExpandoConfigDsl(String name) {
