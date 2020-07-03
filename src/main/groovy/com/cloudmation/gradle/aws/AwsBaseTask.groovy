@@ -173,7 +173,7 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
                 def stsAssumeRoleProvider = StsAssumeRoleCredentialsProvider
                     .builder()
                     .stsClient(StsClient.create())
-                    .refreshRequest(new StsRequestBuilder(namedProfile, this))
+                    .refreshRequest(new StsRequestBuilder(profileProperties, this))
                     .build()
 
                 // Request session credentials
@@ -187,7 +187,7 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
                     setProperty("sessionToken", credentials.sessionToken())
 
                     // Add an expiration timestamp
-                    def expiresInSeconds = Long.parseLong(namedProfile.getOrDefault("duration_seconds", "3600"))
+                    def expiresInSeconds = Long.parseLong(profileProperties.getOrDefault("duration_seconds", "3600"))
                     def expiresTimestamp = LocalDateTime
                         .now()
                         .plusSeconds(expiresInSeconds)
@@ -224,11 +224,11 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
      */
     static protected class StsRequestBuilder implements Consumer<AssumeRoleRequest.Builder> {
 
-        def awsProfile
+        def profileProperties
         def parent
 
-        StsRequestBuilder(Map awsProfile, parent) {
-            this.awsProfile = awsProfile
+        StsRequestBuilder(Map profileProperties, parent) {
+            this.profileProperties = profileProperties
             this.parent = parent
         }
 
@@ -236,22 +236,22 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
         @Override
         void accept(AssumeRoleRequest.Builder builder) {
             // Set role ARN
-            builder.roleArn(awsProfile.role_arn)
+            builder.roleArn(profileProperties.role_arn)
 
             // Set role session name (the SDK requires it)
-            builder.roleSessionName(awsProfile.role_session_name)
+            builder.roleSessionName(profileProperties.role_session_name)
 
             // Set the MFA device serial number
-            builder.serialNumber(awsProfile.mfa_serial)
+            builder.serialNumber(profileProperties.mfa_serial)
 
             // Optionally, set the duration of the session if configured
-            if(awsProfile.duration_seconds) {
-                builder.durationSeconds(Integer.parseInt(awsProfile.duration_seconds))
+            if(profileProperties.duration_seconds) {
+                builder.durationSeconds(Integer.parseInt(profileProperties.duration_seconds))
             }
 
             // Prompt the user for the current MFA code
             def userInputService = parent.services.get(UserInputHandler.class) as UserInputHandler
-            def mfaCode = userInputService.askQuestion("Please enter the 6-digit MFA token for ${awsProfile.mfa_serial}", "000000")
+            def mfaCode = userInputService.askQuestion("Please enter the 6-digit MFA token for ${profileProperties.mfa_serial}", "000000")
             builder.tokenCode(mfaCode)
         }
 
