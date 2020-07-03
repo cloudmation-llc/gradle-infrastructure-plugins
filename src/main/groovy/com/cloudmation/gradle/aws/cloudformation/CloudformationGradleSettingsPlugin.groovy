@@ -16,20 +16,25 @@
 
 package com.cloudmation.gradle.aws.cloudformation
 
+import com.cloudmation.gradle.ProjectTreeSettingsPlugin
 import groovy.io.FileType
-import org.gradle.api.Plugin
 import org.gradle.api.initialization.Settings
 
 /**
- * Gradle settings plugin that scans directories beneath the /templates, and automatically creates CloudFormation
+ * Gradle settings plugin that scans directories beneath the src/cloudformation, and automatically creates CloudFormation
  * subprojects to manage templates and stack deployments.
  */
-class CloudformationGradleSettingsPlugin implements Plugin<Settings> {
+class CloudformationGradleSettingsPlugin extends ProjectTreeSettingsPlugin {
+
+    @Override
+    String getNamespace() {
+        return "cloudformation"
+    }
 
     @Override
     void apply(Settings settings) {
         def rootProjectPath = settings.rootDir.toPath()
-        def cloudformationDir = new File(settings.rootDir, "src/cloudformation")
+        def cloudformationDir = new File(settings.rootDir, "src/${namespace}")
 
         // Check if the 'src/cloudformation' directory exists, or stop if not found
         if(!(cloudformationDir.exists())) {
@@ -38,10 +43,10 @@ class CloudformationGradleSettingsPlugin implements Plugin<Settings> {
         }
 
         // Configure :cloudformation top-level project
-        def topLevelGradleFilename = "cloudformation.gradle"
-        settings.include ":cloudformation"
-        settings.project(":cloudformation").projectDir = cloudformationDir
-        settings.project(":cloudformation").buildFileName = topLevelGradleFilename
+        def topLevelGradleFilename = "${namespace}.gradle"
+        settings.include ":${namespace}"
+        settings.project(":${namespace}").projectDir = cloudformationDir
+        settings.project(":${namespace}").buildFileName = topLevelGradleFilename
 
         // Check (and create) a Gradle build file for the top level project
         def topLevelGradleFile = new File(cloudformationDir, topLevelGradleFilename)
