@@ -24,7 +24,7 @@ import groovy.transform.InheritConstructors
 class CloudformationConfigDsl extends ExpandoConfigDsl {
 
     Map<String, Closure> customStacks = new HashMap<>()
-    Map<String, String> parameterOverrides = new HashMap()
+    Map<String, Object> parameterOverrides = new HashMap()
 
     def parameterOverrides(Map<String, String> params) {
         if(params != null) {
@@ -34,6 +34,10 @@ class CloudformationConfigDsl extends ExpandoConfigDsl {
 
     def parameterOverride(String key, String value) {
         parameterOverrides.put(key, value)
+    }
+
+    def parameterOverride(String key, Closure executable) {
+        parameterOverrides.put(key, executable)
     }
 
     void stack(String stackName, Closure configClosure) {

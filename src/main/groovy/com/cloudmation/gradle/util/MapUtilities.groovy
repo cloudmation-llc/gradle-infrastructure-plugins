@@ -14,23 +14,15 @@
  * limitations under the License.
  */
 
-package com.cloudmation.gradle.aws.config
+package com.cloudmation.gradle.util
 
+class MapUtilities {
 
-import com.cloudmation.gradle.config.ExpandoConfigDsl
-import groovy.transform.InheritConstructors
-
-@InheritConstructors
-class AwsConfigDsl extends ExpandoConfigDsl {
-
-    Map<String, Object> tags = new HashMap()
-
-    def tag(String key, String value) {
-        tags.put(key, value)
-    }
-
-    def tag(String key, Closure executable) {
-        tags.put(key, executable)
+    static def transformWithClosures(key, value) {
+        if(value instanceof Closure) {
+            return [key, (value as Closure).call()]
+        }
+        return [key, value]
     }
 
 }

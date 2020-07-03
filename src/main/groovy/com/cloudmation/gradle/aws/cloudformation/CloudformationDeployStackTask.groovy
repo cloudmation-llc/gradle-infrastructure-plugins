@@ -19,6 +19,7 @@ package com.cloudmation.gradle.aws.cloudformation
 import com.cloudmation.gradle.aws.AwsBaseTask
 import com.cloudmation.gradle.aws.config.ConfigScope
 import com.cloudmation.gradle.util.AnsiColors
+import com.cloudmation.gradle.util.MapUtilities
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
@@ -186,7 +187,7 @@ class CloudformationDeployStackTask extends AwsBaseTask {
             .reverse()
             .findResults { it.aws?.tags }
             .inject(new HashMap()) { Map result, Map tags ->
-                result.putAll(tags)
+                result.putAll(tags.collectEntries(MapUtilities.&transformWithClosures))
                 result
             }
             .collect { key, value -> Tag.builder().key(key).value("${value}").build() }
@@ -200,12 +201,12 @@ class CloudformationDeployStackTask extends AwsBaseTask {
             createChangeSetRequestBuilder.tags(new ArrayList<Tag>())
         }
 
-        // Optionally, add parameter overrides
+        // Optionally, add parameter overrides with transformations
         def parameterOverrides = lookupAwsPropertySources()
             .reverse()
             .findResults { it.aws?.cloudformation?.parameterOverrides }
             .inject(new HashMap()) { Map result, Map parameters ->
-                result.putAll(parameters)
+                result.putAll(parameters.collectEntries(MapUtilities.&transformWithClosures))
                 result
             }
             .collect { key, value -> Parameter.builder().parameterKey(key).parameterValue("${value}").build() }
