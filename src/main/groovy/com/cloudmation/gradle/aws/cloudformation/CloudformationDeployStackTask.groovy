@@ -121,6 +121,14 @@ class CloudformationDeployStackTask extends AwsBaseTask {
         // Create a CloudFormation client builder
         def cloudformationClientBuilder = CloudFormationClient.builder()
 
+        // Optionally, set a default profile for resolving non-credentials configuration
+        resolveNamedProfile().ifPresent({ profile ->
+            cloudformationClientBuilder.overrideConfiguration({ builder ->
+                logger.lifecycle("Using profile ${profile.name()} for deployment")
+                builder.defaultProfileName(profile.name())
+            })
+        })
+
         // Optionally, set a specific AWS region
         lookupProperty { it.aws?.region } . ifPresent { String region ->
             logger.lifecycle("Using region ${region} for deployment")

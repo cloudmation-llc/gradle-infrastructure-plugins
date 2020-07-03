@@ -28,6 +28,7 @@ import software.amazon.awssdk.auth.credentials.AwsSessionCredentials
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.profiles.Profile
 import software.amazon.awssdk.profiles.ProfileFile
 import software.amazon.awssdk.services.sts.StsClient
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider
@@ -94,6 +95,22 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
     }
 
     /**
+     * Look through the project tree to see if a named profile is specified, and if so, resolve the
+     * profile with its properties.
+     * @return An Optional describing the resolved profile, or an empty Optional if not found
+     */
+    Optional<Profile> resolveNamedProfile() {
+        // Check to see if a named profile is defined
+        return lookupProperty { it.aws?.profile }.map { String profileName ->
+            // Attempt to resolve the named profile
+            return ProfileFile
+                .defaultProfileFile()
+                .profile(profileName)
+                .orElse(null)
+        }
+    }
+
+    /**
      * Run through a series of checks to build a chain of one or more credentials providers. Supports named
      * profiles, and if requested, session credentials obtained after a successful MFA challenge. If no profile
      * is specified, then the default credentials provider is used.
@@ -104,19 +121,18 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
         // Create an AWS credentials chain builder to combine multiple methods
         def credentialsChainBuilder = AwsCredentialsProviderChain.builder()
 
-        // Check to see if a named profile is requested
-        def awsProfileName = lookupProperty { it.aws?.profile }.orElse(null)
-        if(awsProfileName) {
-            def namedProfile = ProfileFile
-                .defaultProfileFile()
-                .profile(awsProfileName)
-                .orElseThrow({ new RuntimeException("Could not resolved named AWS profile $awsProfileName") })
-                .properties()
+        // Lookup named profile
+        Optional<Profile> namedProfile = resolveNamedProfile()
 
-            logger.lifecycle("Using named profile ${awsProfileName} for credentials")
+        // If present, apply profile to credentials chain
+        namedProfile.ifPresent({ Profile profile ->
+            def profileName = profile.name()
+            def profileProperties = profile.properties()
+
+            logger.lifecycle("Using named profile ${profileName} for credentials")
 
             // Check if session credentials for the named profile already exist
-            Path pathMfaCredentials = Paths.get(System.getProperty("java.io.tmpdir"), ".aws-mfa-session-${awsProfileName}")
+            Path pathMfaCredentials = Paths.get(System.getProperty("java.io.tmpdir"), ".aws-mfa-session-${profileName}")
             String mfaCredentialsFilename = pathMfaCredentials.getName(pathMfaCredentials.nameCount - 1)
 
             if (Files.exists(pathMfaCredentials)) {
@@ -156,7 +172,7 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
             }
 
             // Check if a role should be assumed and MFA is expected
-            if(namedProfile.role_arn && namedProfile.mfa_serial) {
+            if(profileProperties.role_arn && profileProperties.mfa_serial) {
                 // Create an AWS STS assume role credentials provider
                 def stsAssumeRoleProvider = StsAssumeRoleCredentialsProvider
                     .builder()
@@ -196,9 +212,9 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
             credentialsChainBuilder.addCredentialsProvider(
                 ProfileCredentialsProvider
                     .builder()
-                    .profileName(awsProfileName)
+                    .profileName(profileName)
                     .build())
-        }
+        })
 
         // Lastly, enroll the default credentials provider in the chain
         credentialsChainBuilder.addCredentialsProvider(DefaultCredentialsProvider.create())
