@@ -47,7 +47,7 @@ class CloudformationDeployStackTask extends AwsBaseTask {
     CloudformationDeployStackTask() {
         super()
 
-        // Create the CloudFormaton nested block in advance
+        // Create the CloudFormation nested block in advance
         aws.createNestedDsl("cloudformation", CloudformationConfigDsl)
     }
 
@@ -91,7 +91,7 @@ class CloudformationDeployStackTask extends AwsBaseTask {
         def customStackName = propertyOverrides.get("stackName")
 
         // Check if the task or the containing project have an alternate stack prefix configured
-        def stackPrefix = lookupAwsProperty(
+        def stackPrefix = lookupProperty(
             { it.aws?.cloudformation?.stackPrefix },
             ConfigScope.SELF, ConfigScope.PROJECT)
 
@@ -122,7 +122,7 @@ class CloudformationDeployStackTask extends AwsBaseTask {
         def cloudformationClientBuilder = CloudFormationClient.builder()
 
         // Optionally, set a specific AWS region
-        lookupAwsProperty { it.aws?.region } . ifPresent { String region ->
+        lookupProperty { it.aws?.region } . ifPresent { String region ->
             logger.lifecycle("Using region ${region} for deployment")
             cloudformationClientBuilder.region(Region.of(region))
         }
@@ -167,13 +167,13 @@ class CloudformationDeployStackTask extends AwsBaseTask {
         createChangeSetRequestBuilder.templateBody(templateFile.text as String)
 
         // Optionally, set the IAM role for CloudFormation to assume when executing the stack
-        lookupAwsProperty { it.aws?.cloudformation?.roleArn } . ifPresent { String roleArn ->
+        lookupProperty { it.aws?.cloudformation?.roleArn } . ifPresent { String roleArn ->
             logger.lifecycle("Using role ARN ${roleArn} for deployment")
             createChangeSetRequestBuilder.roleARN(roleArn)
         }
 
         // Optionally, set capabilities (example: IAM) that may be needed for stack execution
-        lookupAwsProperty
+        lookupProperty
             { it.aws?.cloudformation?.capabilities }
             .ifPresent { List<String> capabilities ->
                 if(capabilities.size() > 0) {
@@ -183,7 +183,7 @@ class CloudformationDeployStackTask extends AwsBaseTask {
             }
 
         // Optionally, add resource tags merging from root project to task specific
-        def tags = lookupAwsPropertySources()
+        def tags = lookupPropertySources()
             .reverse()
             .findResults { it.aws?.tags }
             .inject(new HashMap()) { Map result, Map tags ->
@@ -202,7 +202,7 @@ class CloudformationDeployStackTask extends AwsBaseTask {
         }
 
         // Optionally, add parameter overrides with transformations
-        def parameterOverrides = lookupAwsPropertySources()
+        def parameterOverrides = lookupPropertySources()
             .reverse()
             .findResults { it.aws?.cloudformation?.parameterOverrides }
             .inject(new HashMap()) { Map result, Map parameters ->
@@ -217,7 +217,7 @@ class CloudformationDeployStackTask extends AwsBaseTask {
         }
 
         // Optionally, apply custom changeset builder reconfiguration
-        lookupAwsProperty
+        lookupProperty
             { it.aws?.cloudformation?.configureChangeset }
             .ifPresent({ handler -> handler(createChangeSetRequestBuilder) })
 
@@ -237,7 +237,7 @@ class CloudformationDeployStackTask extends AwsBaseTask {
         def changesetArn = changesetCreationResponse.id()
 
         // Check if the build should fail because the changeset is empty
-        def failOnEmptyChangeset = lookupAwsProperty
+        def failOnEmptyChangeset = lookupProperty
             { it.aws?.cloudformation?.failOnEmptyChangeset }
             .orElse(false)
 
