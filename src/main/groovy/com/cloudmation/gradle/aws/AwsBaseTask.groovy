@@ -16,18 +16,14 @@
 
 package com.cloudmation.gradle.aws
 
-import com.cloudmation.gradle.traits.ConfigurableByHierarchy
 import com.cloudmation.gradle.config.ExpandoConfigDsl
+import com.cloudmation.gradle.traits.ConfigurableByHierarchy
 import com.cloudmation.gradle.traits.PropertiesFileUtilities
 import org.gradle.api.DefaultTask
 import org.gradle.api.internal.tasks.userinput.UserInputHandler
 import org.gradle.api.tasks.Internal
 import org.threeten.extra.AmountFormats
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain
-import software.amazon.awssdk.auth.credentials.AwsSessionCredentials
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.auth.credentials.*
 import software.amazon.awssdk.profiles.Profile
 import software.amazon.awssdk.profiles.ProfileFile
 import software.amazon.awssdk.services.sts.StsClient

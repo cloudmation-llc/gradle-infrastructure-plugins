@@ -19,7 +19,6 @@ package com.cloudmation.gradle.aws.cloudformation
 import com.cloudmation.gradle.aws.config.AwsConfigDsl
 import com.cloudmation.gradle.aws.config.TaskGenerationDsl
 import com.cloudmation.gradle.util.Closures
-
 import org.apache.commons.text.CaseUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
