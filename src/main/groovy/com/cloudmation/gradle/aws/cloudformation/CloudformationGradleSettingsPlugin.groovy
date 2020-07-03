@@ -71,17 +71,16 @@ class CloudformationGradleSettingsPlugin extends ProjectTreeSettingsPlugin {
                 .replaceAll("src/", "")
                 .replaceAll("[/]", ":")
             def gradleProjectName = ":${generatedProjectName}"
-            def gradleFilename = "${projectName}.gradle"
 
             // Register the subproject
             settings.include generatedProjectName
             settings.project(gradleProjectName).projectDir = projectDir
-            settings.project(gradleProjectName).buildFileName = gradleFilename
 
-            // Check (and create) a Gradle build file for the subproject
-            def gradleFile = new File(projectDir, gradleFilename)
-            if(!(gradleFile.exists())) {
-                gradleFile.createNewFile()
+            // Optionally, allow the use of a named Gradle file instead of the default build.gradle
+            def customGradleFilename = "${projectName}.gradle"
+            def gradleFile = new File(projectDir, customGradleFilename)
+            if(gradleFile.exists()) {
+                settings.project(gradleProjectName).buildFileName = customGradleFilename
             }
         }
     }
