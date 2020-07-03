@@ -48,6 +48,10 @@ class CloudformationProjectPlugin implements Plugin<Project> {
     @SuppressWarnings("GroovyAssignabilityCheck")
     @Override
     void apply(Project project) {
+        // Create a 'cloudformation' config block on the root project
+        def awsRootConfig = project.extensions.getByName("aws")
+        awsRootConfig.createNestedDsl("cloudformation", CloudformationConfigDsl.class)
+
         project.subprojects { Project subproject ->
             // Skip projects not related to CloudFormation
             if(!(subproject.path.startsWith(":cloudformation"))) {
