@@ -28,12 +28,22 @@ aws {
 
 ### Parameter Overrides
 
+Template parameters can be provided one by one as static values, dynamically resolved using closures _(same behavior as resource tags), or applied from an entire map.
+
 ```groovy
 aws {
     cloudformation {
         /* Call parameterOverride(...) as many times as needed */
         parameterOverride "param1", "value1"
         parameterOverride "param2", "value2"
+        
+        /* Set a parameter dynamically at deployment */
+        parameterOverride "param3", {
+            // Run an external executable
+            def process = "whoami".execute()
+            process.waitFor()
+            return process.text.trim()
+        }       
 
         /* Another option is to provide a Map of parameters */
         parameterOverrides [

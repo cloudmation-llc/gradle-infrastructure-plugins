@@ -10,6 +10,12 @@ Configuration starts at the root project as demonstrated in the [tutorial](cf-tu
 
 Unless otherwise specified, properties use the `name = value` syntax as shown in the examples below.
 
+## Gradle Files
+
+Projects are configured using Gradle files. The plugin accepts the default convention that each project directory has a `build.gradle` files.
+
+For subprojects, you can also define a named Gradle file. For example, if the project subdirectory is named `network`, then you can create a build file named `network.gradle`, and the plugin will use the named file for configuration instead of the default.
+
 ## The AWS Config Block
 
 The `aws` block provides settings that apply to any service used by the plugins.
@@ -25,8 +31,8 @@ aws {
 
 | Property | Default Value | Description
 | ---- | ---- | ----
-| `profile` | System default | Set the credentials profile to use for AWS API calls
-| `region` | System default | Set the region to use for AWS API calls
+| `profile` | System default | Set the named profile for configuring the AWS client. The profile plays an important part in configuring credentials, too.
+| `region` | System default | Set a specific region to use. This will override the named profile, and other lookups built into the AWS SDK.
 | `tags` | None | Map of resource tags to be applied on resources which support them
 
 ### Authentication
@@ -68,6 +74,21 @@ The AWS block supports providing resource tags. Call the `tag` method for each k
 aws {
     tag "tag-key", "tag-value"
     tag "another-key", "another-value"
+}
+```
+
+### Dynamic Resource Tags
+
+Tag values can also be set using closures. This means you run arbitrary Groovy code to determine the value for a tag. You can call other Java/Groovy APIs, or even launch external programs. Example:
+
+```groovy
+aws {
+    tag "last-updated-by", {
+        // Run an external executable
+        def process = "whoami".execute()
+        process.waitFor()
+        return process.text.trim()
+    }   
 }
 ```
 

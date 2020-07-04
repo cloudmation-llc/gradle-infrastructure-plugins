@@ -1,0 +1,72 @@
+Description: VPC master configuration
+
+Resources:
+
+  #
+  # The VPC
+  #
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.255.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  #
+  # DHCP options
+  #
+  DhcpOptions:
+    Type: AWS::EC2::DHCPOptions
+    Properties:
+      DomainName: !Sub "${AWS::Region}.compute.internal"
+      DomainNameServers:
+        - AmazonProvidedDNS
+
+  DhcpOptionsAssociation:
+    Type: AWS::EC2::VPCDHCPOptionsAssociation
+    Properties: 
+      DhcpOptionsId: !Ref DhcpOptions
+      VpcId: !Ref Vpc
+
+  #
+  # Assignable elastic IP for network egress
+  #
+  EipRoot:
+    DependsOn: Vpc
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  #
+  # Internet Gateway
+  #
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+#
+# Stack outputs
+#
+Outputs:
+  VpcId:
+    Description: The VPC ID
+    Value: !Ref Vpc
+    Export:
+      Name: VpcId
+
+  EipRootAllocationId:
+    Description: Allocation ID for the root elastic IP
+    Value: !GetAtt EipRoot.AllocationId
+    Export:
+      Name: VpcEipRootAllocationId
+
+  InternetGatewayId:
+    Description: Internet gateway ID for public subnets
+    Value: !Ref InternetGateway
+    Export:
+      Name: VpcInternetGateway

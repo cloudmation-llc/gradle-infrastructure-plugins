@@ -1,0 +1,87 @@
+Description: VPC availability zone 
+
+Parameters:
+  PrivateSubnetRange:
+    Type: String
+    AllowedPattern: "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}\\/\\d+"
+
+  PublicSubnetRange:
+    Type: String
+    AllowedPattern: "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}\\/\\d+"
+
+  RegionAzIndex:
+    Type: Number
+
+  ExportSuffix:
+    Type: String
+    AllowedPattern: .*
+
+Resources:
+
+  #
+  # Private subnet
+  #
+  SubnetPrivate:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - !Ref RegionAzIndex
+        - Fn::GetAZs: !Ref "AWS::Region"
+      CidrBlock: !Ref PrivateSubnetRange
+      Tags:
+        - Key: Type
+          Value: private
+      VpcId: !ImportValue VpcId
+
+  #
+  # Public subnet
+  #
+  SubnetPublic:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select 
+        - !Ref RegionAzIndex
+        - Fn::GetAZs: !Ref "AWS::Region"
+      CidrBlock: !Ref PublicSubnetRange
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Type
+          Value: public
+      VpcId: !ImportValue VpcId
+      
+  #
+  # Route table for public subnet
+  #
+  RouteTablePublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !ImportValue VpcId
+
+  RouteTablePublicSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SubnetPublic
+      RouteTableId: !Ref RouteTablePublic
+
+  RoutePublicRouteInternetGateway:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !ImportValue VpcInternetGateway
+
+#
+# Stack outputs
+#
+Outputs:
+  PrivateSubnetId:
+    Description: ID for the private subnet
+    Value: !Ref SubnetPrivate
+    Export:
+      Name: !Join ["", ["VpcPrivateSubnet", !Ref ExportSuffix ]]
+
+  PublicSubnetId:
+    Description: ID for the public subnet
+    Value: !Ref SubnetPublic
+    Export:
+      Name: !Join ["", ["VpcPublicSubnet", !Ref ExportSuffix ]]

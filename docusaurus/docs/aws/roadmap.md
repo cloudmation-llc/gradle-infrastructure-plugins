@@ -6,7 +6,7 @@ sidebar_label: Roadmap
 
 Ideas for new directions and functionality to add to the plugins.
 
-* Tag and parameter values from closures
+* ~~Tag and parameter values from closures~~
 * Investigate proper support for using stack sets through the SDK
 * Development of custom CloudFormation resources using Lambda functions
 * General support for Lambda projects

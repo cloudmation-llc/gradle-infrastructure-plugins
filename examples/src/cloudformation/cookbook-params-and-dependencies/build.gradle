@@ -1,0 +1,66 @@
+aws {
+    taskGeneration {
+        group = "AWS Network"
+
+        // Exclude the tasks automatically created by the plugin
+        exclude ".*VpcZoneNetwork"
+    }
+
+    cloudformation {
+        // Set a specific task prefix
+        stackPrefix = "network"
+
+        stack "network-zone-a", {
+            stackName = "vpc-zone-a"
+            templateFile = file("vpc-zone-network.yml")
+            parameterOverride "PrivateSubnetRange", "10.255.1.0/24"
+            parameterOverride "PublicSubnetRange", "10.255.251.0/24"
+            parameterOverride "RegionAzIndex", "0"
+            parameterOverride "ExportSuffix", "ZoneA"
+            rollbackNotifications {
+                hello "world"
+            }
+        }
+
+        stack "network-zone-b", {
+            stackName = "vpc-zone-b"
+            templateFile = file("vpc-zone-network.yml")
+            parameterOverride "PrivateSubnetRange", "10.255.2.0/24"
+            parameterOverride "PublicSubnetRange", "10.255.252.0/24"
+            parameterOverride "RegionAzIndex", "1"
+            parameterOverride "ExportSuffix", "ZoneB"
+        }
+
+        stack "network-zone-c", {
+            stackName = "vpc-zone-c"
+            templateFile = file("vpc-zone-network.yml")
+            parameterOverride "PrivateSubnetRange", "10.255.3.0/24"
+            parameterOverride "PublicSubnetRange", "10.255.253.0/24"
+            parameterOverride "RegionAzIndex", "2"
+            parameterOverride "ExportSuffix", "ZoneC"
+        }
+
+        stack "network-zone-d", {
+            stackName = "vpc-zone-d"
+            templateFile = file("vpc-zone-network.yml")
+            parameterOverride "PrivateSubnetRange", "10.255.4.0/24"
+            parameterOverride "PublicSubnetRange", "10.255.254.0/24"
+            parameterOverride "RegionAzIndex", "3"
+            parameterOverride "ExportSuffix", "ZoneD"
+        }
+    }
+}
+
+afterEvaluate {
+    deployNetworkZoneA.dependsOn deployVpc
+    deployNetworkZoneB.dependsOn deployVpc
+    deployNetworkZoneC.dependsOn deployVpc
+    deployNetworkZoneD.dependsOn deployVpc
+
+    // Define a task to deploy all of the others
+    task "deployNetwork" {
+        group = "AWS Network"
+        description = "Deploy all of the network resources"
+        dependsOn deployNetworkZoneA, deployNetworkZoneB, deployNetworkZoneC, deployNetworkZoneD
+    }
+}

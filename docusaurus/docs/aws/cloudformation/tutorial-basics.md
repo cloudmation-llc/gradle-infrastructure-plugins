@@ -133,7 +133,7 @@ Once `vpc.yml` is created and has some content, this is a good point to check ou
     src={useBaseUrl('/img/screenshots/aws-tutorial-p1-gradle-projects.png')}
     style={{ width: '80%' }} />
 
-Note now that `vpc.yml` is detected, its containing directory `network` becomes a subproject. As a convenience, the plugin also generated an empty Gradle build file with the same name. You should see `network.gradle` with the template.
+Note now that `vpc.yml` is detected, its containing directory `network` becomes a subproject.
 
 Now, let's look at the tasks. Run `gradle tasks`.
 
