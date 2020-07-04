@@ -22,7 +22,6 @@ import com.cloudmation.gradle.util.Closures
 import org.apache.commons.text.CaseUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.GradleBuild
 
 import static groovy.io.FileType.FILES
 
@@ -69,17 +68,6 @@ class CloudformationProjectPlugin implements Plugin<Project> {
 
             // Wait until subproject is completely evaluated
             subproject.afterEvaluate {
-                // Check for a custom task group
-                def taskGroup = taskGenConfig.group ?: DEFAULT_TASK_GROUP
-
-                // Add a custom method for registering group tasks
-                subproject.ext.deployAsGroup = { String taskName, String... tasksToRun ->
-                    subproject.tasks.register(taskName, GradleBuild) {
-                        group taskGroup
-                        tasks = tasksToRun as Collection<String>
-                    }
-                }
-
                 // Iterate through YAML templates and generate specific tasks
                 subproject.projectDir.eachFileMatch(FILES, ~/.*\.(y[a]?ml|json)/, { File template ->
                     def (baseName, extension) = template.name.split("[.]")

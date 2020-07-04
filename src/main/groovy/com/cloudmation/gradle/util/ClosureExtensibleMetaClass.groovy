@@ -21,7 +21,7 @@ package com.cloudmation.gradle.util
  */
 class ClosureExtensibleMetaClass extends DelegatingMetaClass {
 
-    private Map<String, Optional<Object>> delegateProperties = new HashMap<>()
+    private Map<String, Object> delegateProperties = new HashMap<>()
 
     ClosureExtensibleMetaClass(MetaClass delegate) {
         super(delegate)
@@ -46,7 +46,7 @@ class ClosureExtensibleMetaClass extends DelegatingMetaClass {
         }
     }
 
-    Map<String, Optional<Object>> getDelegateProperties() {
+    Map<String, Object> getDelegateProperties() {
         return delegateProperties
     }
 
