@@ -128,7 +128,11 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
             logger.lifecycle("Using named profile ${profileName} for credentials")
 
             // Check if session credentials for the named profile already exist
-            Path pathMfaCredentials = Paths.get(System.getProperty("java.io.tmpdir"), ".aws-mfa-session-${profileName}")
+            Path pathMfaCredentials = Paths.get(
+                System.getProperty("user.home"),
+                ".aws",
+                ".aws-mfa-session-${profileName}")
+
             String mfaCredentialsFilename = pathMfaCredentials.getName(pathMfaCredentials.nameCount - 1)
 
             if (Files.exists(pathMfaCredentials)) {
@@ -152,13 +156,11 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
                         credentialsChainBuilder.addCredentialsProvider(
                             StaticCredentialsProvider.create(sessionCredentials))
 
-                        if (logger) {
-                            // Calculate a helpful duration for when the expiration will happen
-                            def timeRemaining = Duration.between(now, expiration)
-                            def formattedDuration = AmountFormats.wordBased(timeRemaining, Locale.ENGLISH)
+                        // Calculate a helpful duration for when the expiration will happen
+                        def timeRemaining = Duration.between(now, expiration)
+                        def formattedDuration = AmountFormats.wordBased(timeRemaining, Locale.ENGLISH)
 
-                            logger.lifecycle("Using existing MFA session credentials from ${mfaCredentialsFilename} (expires in ${formattedDuration})")
-                        }
+                        logger.lifecycle("Using existing MFA session credentials from ${mfaCredentialsFilename} (expires in ${formattedDuration})")
 
                         // Short circuit the credentials resolution and return the chain
                         // with the resolved session credentials
@@ -199,9 +201,7 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
                 credentialsChainBuilder.addCredentialsProvider(
                     StaticCredentialsProvider.create(credentials))
 
-                if(logger) {
-                    logger.lifecycle("Wrote new AWS MFA session credentials to ${mfaCredentialsFilename}")
-                }
+                logger.lifecycle("Wrote new AWS MFA session credentials to ${mfaCredentialsFilename}")
             }
 
             // Enroll named profile provider next in the credentials chain
