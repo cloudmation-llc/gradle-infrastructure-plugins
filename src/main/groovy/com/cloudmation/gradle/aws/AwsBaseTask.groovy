@@ -212,6 +212,10 @@ class AwsBaseTask extends DefaultTask implements ConfigurableByHierarchy, Proper
                     .build())
         })
 
+        // Put the instance metadata provider ahead of the default in the chain
+        // (helps with excellent tools such as aws-vault which can provide a local mock metadata server)
+        credentialsChainBuilder.addCredentialsProvider(InstanceProfileCredentialsProvider.create())
+
         // Lastly, enroll the default credentials provider in the chain
         credentialsChainBuilder.addCredentialsProvider(DefaultCredentialsProvider.create())
 

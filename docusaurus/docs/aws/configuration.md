@@ -37,7 +37,7 @@ aws {
 
 ### Authentication
 
-Under the hood, the AWS Java SDK v2 is used to make service calls. If you do nothing, then the [default credential provider](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/auth/credentials/DefaultCredentialsProvider.html) is used. This is typically the most ideal fit especially if you use the plugins in a CI/CD workflow.
+Under the hood, the AWS Java SDK v2 is used to make service calls. If you do nothing, then the [instance metadata provider](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/auth/credentials/InstanceProfileCredentialsProvider.html) is configured, followed by the [default credential provider](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/auth/credentials/DefaultCredentialsProvider.html) is used. This is typically the most ideal fit especially if you use the plugins in a CI/CD workflow.
 
 Optionally, you can configure authentication using a named profile on your system. Named profiles for AWS are set up by default in `$HOME/.aws/config`.
 
